@@ -1,0 +1,9 @@
+xgboost==2.0.3
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.5.1
+optuna==3.6.1
+pydantic==1.10.17
+loguru==0.7.2
+mlflow==2.14.2
+shap==0.45.1

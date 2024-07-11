@@ -1,0 +1,14 @@
+version: '3.7'
+
+services:
+  project:
+    build:
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../../:/workspace
+      - /Users/egorborisov/projects/mlflow_example/mlruns:/Users/egorborisov/projects/mlflow_example/mlruns
+    working_dir: /workspace
+    command: >
+      mlserver start .
