@@ -1,6 +1,6 @@
 # Mlflow Local Workflow Example
 
-Here we show a few steps of the machine learning lifecycle using an XGBoost example, focusing on integration with MLflow. We'll structure MLflow experiments and runs, perform hyperparameter optimizations with Optuna, and track all runs. We will use MLflow's capabilities to compare runs and adjust the best parameters. Additionally, we'll cover options to log the model and use it with different flavours, as well as ways to collaborate within a team without a remote tracking server.
+Here we show a few steps of the machine learning lifecycle using an `XGBoost` example, focusing on integration with `MLflow`. We'll structure `MLflow` experiments and runs, perform hyperparameter optimizations with `Optuna`, and track all runs. We will use MLflow's capabilities to compare runs and adjust the best parameters. Additionally, we'll cover options to log the model and use it with different flavours, as well MLprojects packing and mlserving capabilities.
 
 > You have two options to work with this example: you can either clone it and follow all the steps on your local machine, or simply go through this README file.
 
@@ -8,7 +8,7 @@ Here we show a few steps of the machine learning lifecycle using an XGBoost exam
 
 ## Prepare env
 
-You will need `Python 3.10.11` and `conda` installed on your machine firts. Then run the folllowing commands in you terminal. This script sets up the conda environment and converts `modeling.py` back to a Jupyter notebook (`modeling.ipynb`) using jupytext.
+You will need `conda` installed on your machine first. Then run the following commands in you terminal. This script sets up the conda environment from `conda.yaml`, activate it and convert `modeling.py` back to a Jupyter notebook (`modeling.ipynb`) using jupytext.
 
 ```shell
 conda env create -f conda.yaml
@@ -18,9 +18,7 @@ jupytext --to notebook modeling.py -o modeling.ipynb
 
 You may then use this environment in IDE or just call `jupyter notebook` and then navigate to `modeling.ipynb`.
 
-> Conda produce platform specific specification so you will probably need to install dependencies manually
-
-> It's not necessary to create an environment with conda; you can also use poetry or manually install all packages from a `requirements.txt`. However, MLflow has built-in compatibility with conda, which is why we're using it here.
+> It's not necessary to create an environment with conda; you can also use poetry or manually install all packages from a `conda.yaml`. However, MLflow has built-in compatibility with conda, which is why we're using it here.
 
 ## Run MLflow UI
 run from the terminal `mlflow ui --workers 1` to run MLflow with 1 worker on localhost:5000
@@ -98,12 +96,12 @@ if __name__ == '__main__':
         logger.info('Data preprocessing finished')
 ```
 
-    2024-07-12 00:39:06 | INFO | Data preprocessing started
-    2024-07-12 00:39:06 | INFO | Cancer data downloaded
-    2024-07-12 00:39:06 | INFO | Additional features added
-    2024-07-12 00:39:06 | INFO | train uploaded
-    2024-07-12 00:39:06 | INFO | test uploaded
-    2024-07-12 00:39:06 | INFO | Data preprocessing finished
+    2024-07-12 08:51:44 | INFO | Data preprocessing started
+    2024-07-12 08:51:44 | INFO | Cancer data downloaded
+    2024-07-12 08:51:44 | INFO | Additional features added
+    2024-07-12 08:51:44 | INFO | train uploaded
+    2024-07-12 08:51:44 | INFO | test uploaded
+    2024-07-12 08:51:44 | INFO | Data preprocessing finished
 
 
 ### Hyperparameters tuning
@@ -210,27 +208,27 @@ if __name__ == '__main__':
         mlflow.log_metric('accuracy', 1 - study.best_value)
 ```
 
-    2024-07-12 00:39:09 | INFO | Hyperparameters tuning started
+    2024-07-12 08:52:07 | INFO | Hyperparameters tuning started
 
 
 
     Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
 
 
-    2024-07-12 00:39:09 | INFO | train downloaded
-    2024-07-12 00:39:09 | INFO | Starting optuna study
-    2024-07-12 00:39:10 | INFO | Attempt: 0, Accuracy: 0.9553805774278216
-    2024-07-12 00:39:10 | INFO | Attempt: 1, Accuracy: 0.9553805774278216
-    2024-07-12 00:39:11 | INFO | Attempt: 2, Accuracy: 0.9606299212598425
-    2024-07-12 00:39:11 | INFO | Attempt: 3, Accuracy: 0.9606299212598425
-    2024-07-12 00:39:11 | INFO | Attempt: 4, Accuracy: 0.963254593175853
-    2024-07-12 00:39:12 | INFO | Attempt: 5, Accuracy: 0.958005249343832
-    2024-07-12 00:39:12 | INFO | Attempt: 6, Accuracy: 0.9422572178477691
-    2024-07-12 00:39:12 | INFO | Attempt: 7, Accuracy: 0.9448818897637795
-    2024-07-12 00:39:13 | INFO | Attempt: 8, Accuracy: 0.958005249343832
-    2024-07-12 00:39:13 | INFO | Attempt: 9, Accuracy: 0.9606299212598425
-    2024-07-12 00:39:13 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 4, 'alpha': 0.03623937669892902, 'learning_rate': 0.45680940256230484, 'num_boost_round': 156}
-    2024-07-12 00:39:13 | INFO | Best trial Accuracy: 0.963254593175853
+    2024-07-12 08:52:07 | INFO | train downloaded
+    2024-07-12 08:52:07 | INFO | Starting optuna study
+    2024-07-12 08:52:07 | INFO | Attempt: 0, Accuracy: 0.9553805774278216
+    2024-07-12 08:52:08 | INFO | Attempt: 1, Accuracy: 0.9448818897637795
+    2024-07-12 08:52:08 | INFO | Attempt: 2, Accuracy: 0.9501312335958005
+    2024-07-12 08:52:09 | INFO | Attempt: 3, Accuracy: 0.9606299212598425
+    2024-07-12 08:52:09 | INFO | Attempt: 4, Accuracy: 0.9501312335958005
+    2024-07-12 08:52:09 | INFO | Attempt: 5, Accuracy: 0.9553805774278216
+    2024-07-12 08:52:10 | INFO | Attempt: 6, Accuracy: 0.958005249343832
+    2024-07-12 08:52:11 | INFO | Attempt: 7, Accuracy: 0.9553805774278216
+    2024-07-12 08:52:11 | INFO | Attempt: 8, Accuracy: 0.958005249343832
+    2024-07-12 08:52:12 | INFO | Attempt: 9, Accuracy: 0.9606299212598425
+    2024-07-12 08:52:12 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 4, 'alpha': 0.007063471170035473, 'learning_rate': 0.3788377249938601, 'num_boost_round': 50}
+    2024-07-12 08:52:12 | INFO | Best trial Accuracy: 0.9606299212598425
 
 
 ### Review experiment resulst from MLflow UI
@@ -338,35 +336,35 @@ if __name__ == '__main__':
         logger.info('Model registered')
 ```
 
-    2024-07-12 00:39:16 | INFO | Model training started
+    2024-07-12 08:52:36 | INFO | Model training started
 
 
 
     Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
 
 
-    2024-07-12 00:39:16 | INFO | train downloaded
+    2024-07-12 08:52:37 | INFO | train downloaded
 
 
 
     Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
 
 
-    2024-07-12 00:39:16 | INFO | test downloaded
+    2024-07-12 08:52:37 | INFO | test downloaded
 
 
-    Successfully registered model 'CancerModelBooster'.
-    Created version '1' of model 'CancerModelBooster'.
+    Registered model 'CancerModelBooster' already exists. Creating a new version of this model...
+    Created version '5' of model 'CancerModelBooster'.
 
 
-    2024-07-12 00:39:21 | INFO | train uploaded
-    2024-07-12 00:39:21 | INFO | test uploaded
-    2024-07-12 00:39:21 | INFO | Model training finished
-    2024-07-12 00:39:21 | INFO | Model registered
+    2024-07-12 08:52:41 | INFO | train uploaded
+    2024-07-12 08:52:41 | INFO | test uploaded
+    2024-07-12 08:52:41 | INFO | Model training finished
+    2024-07-12 08:52:41 | INFO | Model registered
 
 
-    Successfully registered model 'CancerModel'.
-    Created version '1' of model 'CancerModel'.
+    Registered model 'CancerModel' already exists. Creating a new version of this model...
+    Created version '5' of model 'CancerModel'.
 
 
 After saving a model, we can access the artifacts page within the run and also check the model using the model tracking UI. We can save as many artifacts as we want, such as custom plots, text files, images, datasets, python scripts, or jupyter notebooks.
@@ -422,15 +420,15 @@ if __name__ == '__main__':
         logger.success('Evaluation finished')
 ```
 
-    2024-07-12 00:39:26 | INFO | Evaluation started
+    2024-07-12 08:52:48 | INFO | Evaluation started
 
 
 
     Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
 
 
-    2024-07-12 00:39:26 | INFO | test downloaded
-    2024-07-12 00:39:35 | SUCCESS | Evaluation finished
+    2024-07-12 08:52:49 | INFO | test downloaded
+    2024-07-12 08:52:57 | SUCCESS | Evaluation finished
 
 
 > Here we utilize `MLflow Dataset` functionality. Datasets allow tracking metadata for files in runs, including columns, hash, and source link. We can also run the `mlflow.evaluate` command for an already created `MLflow dataset`.
@@ -495,14 +493,14 @@ if __name__ == '__main__':
         extract_and_save_cell('modeling.ipynb', comment)
 ```
 
-    2024-07-12 01:40:11 | INFO | data_preprocessing.py saved
-    2024-07-12 01:40:11 | INFO | hyperparameters_tuning.py saved
-    2024-07-12 01:40:11 | INFO | model_training.py saved
-    2024-07-12 01:40:11 | INFO | data_evaluation.py saved
+    2024-07-12 08:53:09 | INFO | data_preprocessing.py saved
+    2024-07-12 08:53:09 | INFO | hyperparameters_tuning.py saved
+    2024-07-12 08:53:09 | INFO | model_training.py saved
+    2024-07-12 08:53:09 | INFO | data_evaluation.py saved
 
 
 ### Conda env export
-We already have a conda.yaml file, but its creation can be complex and require manual steps. Exporting the current environment with `conda env export | grep -v '^prefix: ' > conda.yaml` may not be suitable for sharing or `Docker` use due to platform-specific issues. Adding the `--from-history` flag lists only explicitly requested packages but may fail with pip-installed packages. Using `pip freeze` includes local package links. Thus, manually creating a `requirements.txt` file or `conda.yaml` might be the best solution.
+We already have a conda.yaml file, but its creation can be complex and require manual steps. Exporting the current environment with `conda env export > conda.yaml` may not be suitable for sharing or `Docker` use due to platform-specific issues. Adding the `--from-history` flag lists only explicitly requested packages but may fail with pip-installed packages. Using `pip freeze` includes local package links. Thus, manually creating a `requirements.txt` file or `conda.yaml` might be the best solution.
 
 ### MLproject file
 
@@ -544,7 +542,7 @@ entry_points:
 
 
 ### Mlflow run
-We can run project endpoints using either the CLI or the Python API. In this instance, we run the first endpoint with different test size parameters in a local environment.
+We can run project endpoints using either the CLI or the Python API.
 
 > The `mlflow run` command sets the experiment and creates a run before executing the python script. Therefore, if we use the same commands inside our Python code with specified names, it is important to use the same names in this command.
 
@@ -560,18 +558,18 @@ mlflow.run(
 )
 ```
 
-    2024-07-12 00:39:52 | INFO | Data preprocessing started
-    2024-07-12 00:39:52 | INFO | Cancer data downloaded
-    2024-07-12 00:39:52 | INFO | Additional features added
-    2024-07-12 00:39:52 | INFO | train uploaded
-    2024-07-12 00:39:52 | INFO | test uploaded
-    2024-07-12 00:39:52 | INFO | Data preprocessing finished
+    2024-07-12 08:53:19 | INFO | Data preprocessing started
+    2024-07-12 08:53:19 | INFO | Cancer data downloaded
+    2024-07-12 08:53:19 | INFO | Additional features added
+    2024-07-12 08:53:19 | INFO | train uploaded
+    2024-07-12 08:53:19 | INFO | test uploaded
+    2024-07-12 08:53:19 | INFO | Data preprocessing finished
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x168865cd0>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x1736728d0>
 
 
 
@@ -589,35 +587,25 @@ mlflow.run(
 )
 ```
 
-    Channels:
-     - conda-forge
-     - defaults
-    Platform: osx-arm64
-    Collecting package metadata (repodata.json): ...working... done
-    Solving environment: ...working... done
-    Preparing transaction: ...working... done
-    Verifying transaction: ...working... done
-    Executing transaction: ...working... done
-    Installing pip dependencies: ...working... done
-    2024-07-12 00:40:51 | INFO | Hyperparameters tuning started
-    2024-07-12 00:40:51 | INFO | train downloaded
-    2024-07-12 00:40:51 | INFO | Starting optuna study
+    2024-07-12 08:53:24 | INFO | Hyperparameters tuning started
+    2024-07-12 08:53:24 | INFO | train downloaded
+    2024-07-12 08:53:24 | INFO | Starting optuna study
 
 
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 2711.25it/s]
+    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1747.63it/s]
 
 
-    2024-07-12 00:40:51 | INFO | Attempt: 0, Accuracy: 0.9541246733855916
-    2024-07-12 00:40:52 | INFO | Attempt: 1, Accuracy: 0.9399402762224711
-    2024-07-12 00:40:53 | INFO | Attempt: 2, Accuracy: 0.9576334453154162
-    2024-07-12 00:40:53 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 3, 'alpha': 0.03348833961166779, 'learning_rate': 0.31237953375320565, 'num_boost_round': 134}
-    2024-07-12 00:40:53 | INFO | Best trial Accuracy: 0.9576334453154162
+    2024-07-12 08:53:25 | INFO | Attempt: 0, Accuracy: 0.9576707726763718
+    2024-07-12 08:53:25 | INFO | Attempt: 1, Accuracy: 0.9541620007465472
+    2024-07-12 08:53:26 | INFO | Attempt: 2, Accuracy: 0.9541620007465472
+    2024-07-12 08:53:26 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 7, 'alpha': 0.03696224965168004, 'learning_rate': 0.18288024959959415, 'num_boost_round': 281}
+    2024-07-12 08:53:26 | INFO | Best trial Accuracy: 0.9576707726763718
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x17e7e7c10>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x280d54f50>
 
 
 
@@ -632,31 +620,31 @@ mlflow.run(
 )
 ```
 
-    2024-07-12 00:40:59 | INFO | Model training started
-    2024-07-12 00:41:00 | INFO | train downloaded
-    2024-07-12 00:41:00 | INFO | test downloaded
+    2024-07-12 08:53:30 | INFO | Model training started
+    2024-07-12 08:53:30 | INFO | train downloaded
+    2024-07-12 08:53:30 | INFO | test downloaded
 
 
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 3597.17it/s]
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1844.46it/s]
+    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 5071.71it/s]
+    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1691.93it/s]
     Registered model 'CancerModelBooster' already exists. Creating a new version of this model...
-    Created version '2' of model 'CancerModelBooster'.
+    Created version '6' of model 'CancerModelBooster'.
 
 
-    2024-07-12 00:41:05 | INFO | train uploaded
-    2024-07-12 00:41:05 | INFO | test uploaded
-    2024-07-12 00:41:05 | INFO | Model training finished
-    2024-07-12 00:41:05 | INFO | Model registered
+    2024-07-12 08:53:35 | INFO | train uploaded
+    2024-07-12 08:53:35 | INFO | test uploaded
+    2024-07-12 08:53:35 | INFO | Model training finished
+    2024-07-12 08:53:35 | INFO | Model registered
 
 
     Registered model 'CancerModel' already exists. Creating a new version of this model...
-    Created version '2' of model 'CancerModel'.
+    Created version '6' of model 'CancerModel'.
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x168dba410>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x2807e2310>
 
 
 
@@ -682,27 +670,27 @@ mlflow.run(
     Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
 
 
-    2024-07-12 00:41:07 | INFO | test downloaded
-    2024-07-12 00:41:09 | INFO | Evaluation started
-    2024-07-12 00:41:09 | INFO | test downloaded
+    2024-07-12 08:53:36 | INFO | test downloaded
+    2024-07-12 08:53:37 | INFO | Evaluation started
+    2024-07-12 08:53:37 | INFO | test downloaded
 
 
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 5949.37it/s]
+    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 4975.45it/s]
 
 
-    2024-07-12 00:41:24 | SUCCESS | Evaluation finished
+    2024-07-12 08:53:51 | SUCCESS | Evaluation finished
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x17fae4b90>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x281097bd0>
 
 
 
 ### Docker setup
 
-`Dockerfile` and `docker-compose` stored in the mlproject_docker folder. Docker image based on slim Python and install dependencies from a manually created `requirments.txt`. `docker-compose` mounts working directory to a volume to access files and log all MLflow activities in the `mlruns` folder. In a production environment, we might run this command from an orchestration tool and provide the MLFLOW_TRACKING_URI to a remote MLflow server. You can run `docker-compose -f mlproject_docker/docker-compose.yml build` to build the image and then `docker-compose -f mlproject_docker/docker-compose.yml` up to run it.
+`Dockerfile` and `docker-compose` stored in the docker/mlproject folder. Docker image based on slim Python and install dependencies from a manually created `requirments.txt`. `docker-compose` mounts working directory to a volume to access files and log all MLflow activities in the `mlruns` folder. In a production environment, we might run this command from an orchestration tool and provide the MLFLOW_TRACKING_URI to a remote MLflow server. You can run `docker-compose -f mlproject_docker/docker-compose.yml build` to build the image and then `docker-compose -f mlproject_docker/docker-compose.yml` up to run it.
 
 > We need to mount the absolute path to the `mlruns` folder in the project root to log and retrieve artifacts. This is necessary because local MLflow tracking uses absolute paths.
 
@@ -901,15 +889,13 @@ pyfunc_model.predict(test)
 
 
 ## Model Serving
-MLflow has built-in capabilities to serve models locally (though it also integrates with SageMaker and Kubernetes, which we won't cover here). Serving a model with flask is pretty straightforward: `mlflow models serve -m models:/CancerModel/1 -p 5050 --env-manager local`. But we also may utilize `mlserver` and to do it properly we may first install `mlserver`, `mlserver-mlflow`, `mlserver-xgboost` and create json config file.
-
-You may also start from docker setup: `docker-compose -f docker/mlserve/docker-compose.yml build` and `docker-compose -f docker/mlserve/docker-compose.yml up`
+MLflow has built-in capabilities to serve models locally (though it also integrates with SageMaker and Kubernetes, which we won't cover here). Serving a model with flask is pretty straightforward: `mlflow models serve -m models:/CancerModel/1 -p 5050 --env-manager local`. But we also may utilize `mlserver` and to do it properly we may first install `mlserver`, `mlserver-mlflow`, `mlserver-xgboost` and create json config file:
 
 
 
 ```python
 from IPython.display import Markdown, display
-with open('docker/mlserve/model-settings.json', 'r') as file:
+with open('model-settings.json', 'r') as file:
     content = file.read()
 
 # Display the contents as a Markdown code snippet
@@ -928,7 +914,9 @@ display(Markdown(f"```json\n{content}\n```"))
 ```
 
 
-Then, we can run mlserver start and it's done. After that, we can check the documentation for our model and inspect the expected data structure via swagger:
+You may also start from docker setup: `docker-compose -f docker/mlserve/docker-compose.yml build` and `docker-compose -f docker/mlserve/docker-compose.yml up`
+
+Then, we can run `mlserver start .` and it's done. After that, we can check the documentation for our model and inspect the expected data structure via swagger:
 
 ![](img/mlserver.png)
 

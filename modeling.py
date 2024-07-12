@@ -14,7 +14,7 @@
 
 # # Mlflow Local Workflow Example
 #
-# Here we show a few steps of the machine learning lifecycle using an XGBoost example, focusing on integration with MLflow. We'll structure MLflow experiments and runs, perform hyperparameter optimizations with Optuna, and track all runs. We will use MLflow's capabilities to compare runs and adjust the best parameters. Additionally, we'll cover options to log the model and use it with different flavours, as well as ways to collaborate within a team without a remote tracking server.
+# Here we show a few steps of the machine learning lifecycle using an `XGBoost` example, focusing on integration with `MLflow`. We'll structure `MLflow` experiments and runs, perform hyperparameter optimizations with `Optuna`, and track all runs. We will use MLflow's capabilities to compare runs and adjust the best parameters. Additionally, we'll cover options to log the model and use it with different flavours, as well MLprojects packing and mlserving capabilities.
 #
 # > You have two options to work with this example: you can either clone it and follow all the steps on your local machine, or simply go through this README file.
 #
@@ -22,7 +22,7 @@
 
 # ## Prepare env
 #
-# You will need `Python 3.10.11` and `conda` installed on your machine firts. Then run the folllowing commands in you terminal. This script sets up the conda environment and converts `modeling.py` back to a Jupyter notebook (`modeling.ipynb`) using jupytext.
+# You will need `conda` installed on your machine first. Then run the following commands in you terminal. This script sets up the conda environment from `conda.yaml`, activate it and convert `modeling.py` back to a Jupyter notebook (`modeling.ipynb`) using jupytext.
 #
 # ```shell
 # conda env create -f conda.yaml
@@ -32,9 +32,7 @@
 #
 # You may then use this environment in IDE or just call `jupyter notebook` and then navigate to `modeling.ipynb`.
 #
-# > Conda produce platform specific specification so you will probably need to install dependencies manually
-#
-# > It's not necessary to create an environment with conda; you can also use poetry or manually install all packages from a `requirements.txt`. However, MLflow has built-in compatibility with conda, which is why we're using it here.
+# > It's not necessary to create an environment with conda; you can also use poetry or manually install all packages from a `conda.yaml`. However, MLflow has built-in compatibility with conda, which is why we're using it here.
 
 # ## Run MLflow UI
 # run from the terminal `mlflow ui --workers 1` to run MLflow with 1 worker on localhost:5000
@@ -432,7 +430,7 @@ if __name__ == '__main__':
 # -
 
 # ### Conda env export
-# We already have a conda.yaml file, but its creation can be complex and require manual steps. Exporting the current environment with `conda env export | grep -v '^prefix: ' > conda.yaml` may not be suitable for sharing or `Docker` use due to platform-specific issues. Adding the `--from-history` flag lists only explicitly requested packages but may fail with pip-installed packages. Using `pip freeze` includes local package links. Thus, manually creating a `requirements.txt` file or `conda.yaml` might be the best solution.
+# We already have a conda.yaml file, but its creation can be complex and require manual steps. Exporting the current environment with `conda env export > conda.yaml` may not be suitable for sharing or `Docker` use due to platform-specific issues. Adding the `--from-history` flag lists only explicitly requested packages but may fail with pip-installed packages. Using `pip freeze` includes local package links. Thus, manually creating a `requirements.txt` file or `conda.yaml` might be the best solution.
 
 # ### MLproject file
 #
@@ -448,7 +446,7 @@ display(Markdown(f"```yaml\n{mlproject_content}\n```"))
 # -
 
 # ### Mlflow run
-# We can run project endpoints using either the CLI or the Python API. In this instance, we run the first endpoint with different test size parameters in a local environment.
+# We can run project endpoints using either the CLI or the Python API.
 #
 # > The `mlflow run` command sets the experiment and creates a run before executing the python script. Therefore, if we use the same commands inside our Python code with specified names, it is important to use the same names in this command.
 
@@ -499,7 +497,7 @@ mlflow.run(
 
 # ### Docker setup
 #
-# `Dockerfile` and `docker-compose` stored in the mlproject_docker folder. Docker image based on slim Python and install dependencies from a manually created `requirments.txt`. `docker-compose` mounts working directory to a volume to access files and log all MLflow activities in the `mlruns` folder. In a production environment, we might run this command from an orchestration tool and provide the MLFLOW_TRACKING_URI to a remote MLflow server. You can run `docker-compose -f mlproject_docker/docker-compose.yml build` to build the image and then `docker-compose -f mlproject_docker/docker-compose.yml` up to run it.
+# `Dockerfile` and `docker-compose` stored in the docker/mlproject folder. Docker image based on slim Python and install dependencies from a manually created `requirments.txt`. `docker-compose` mounts working directory to a volume to access files and log all MLflow activities in the `mlruns` folder. In a production environment, we might run this command from an orchestration tool and provide the MLFLOW_TRACKING_URI to a remote MLflow server. You can run `docker-compose -f mlproject_docker/docker-compose.yml build` to build the image and then `docker-compose -f mlproject_docker/docker-compose.yml` up to run it.
 #
 # > We need to mount the absolute path to the `mlruns` folder in the project root to log and retrieve artifacts. This is necessary because local MLflow tracking uses absolute paths.
 
@@ -580,21 +578,21 @@ xgboost_model.predict(test)
 pyfunc_model.predict(test)
 
 # ## Model Serving
-# MLflow has built-in capabilities to serve models locally (though it also integrates with SageMaker and Kubernetes, which we won't cover here). Serving a model with flask is pretty straightforward: `mlflow models serve -m models:/CancerModel/1 -p 5050 --env-manager local`. But we also may utilize `mlserver` and to do it properly we may first install `mlserver`, `mlserver-mlflow`, `mlserver-xgboost` and create json config file.
-#
-# You may also start from docker setup: `docker-compose -f docker/mlserve/docker-compose.yml build` and `docker-compose -f docker/mlserve/docker-compose.yml up`
+# MLflow has built-in capabilities to serve models locally (though it also integrates with SageMaker and Kubernetes, which we won't cover here). Serving a model with flask is pretty straightforward: `mlflow models serve -m models:/CancerModel/1 -p 5050 --env-manager local`. But we also may utilize `mlserver` and to do it properly we may first install `mlserver`, `mlserver-mlflow`, `mlserver-xgboost` and create json config file:
 #
 
 # +
 from IPython.display import Markdown, display
-with open('docker/mlserve/model-settings.json', 'r') as file:
+with open('model-settings.json', 'r') as file:
     content = file.read()
 
 # Display the contents as a Markdown code snippet
 display(Markdown(f"```json\n{content}\n```"))
 # -
 
-# Then, we can run mlserver start and it's done. After that, we can check the documentation for our model and inspect the expected data structure via swagger:
+# You may also start from docker setup: `docker-compose -f docker/mlserve/docker-compose.yml build` and `docker-compose -f docker/mlserve/docker-compose.yml up`
+
+# Then, we can run `mlserver start .` and it's done. After that, we can check the documentation for our model and inspect the expected data structure via swagger:
 #
 # ![](img/mlserver.png)
 #
