@@ -1,14 +1,26 @@
 # hyperparameters_tuning
+import tempfile
+import sys
+import psutil
+import os
 import argparse
 import logging
 import warnings
 import mlflow
 import optuna
+import pandas as pd
 import xgboost as xgb
 from xgboost.callback import TrainingCallback
+from loguru import logger
 
-from config import config, logger
-from utils import download_dataset_as_artifact, get_last_run
+from config import config
+
+# set up logging
+logger.remove()
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
+warnings.filterwarnings('ignore')
+logging.getLogger('mlflow').setLevel(logging.ERROR)
+optuna.logging.set_verbosity(optuna.logging.ERROR)
 
 
 # Custom callback for logging metrics
@@ -61,23 +73,25 @@ if __name__ == '__main__':
     parser.add_argument("--n-trials", default=config.default_n_trials, type=float)
     N_TRIALS = parser.parse_args().n_trials
 
-    # set up logging
-    warnings.filterwarnings('ignore')
-    logging.getLogger('mlflow').setLevel(logging.ERROR)
-    optuna.logging.set_verbosity(optuna.logging.ERROR)
-
-    logger.info('Hyperparameters tuning started')
+    logger.info(f'Hyperparameters tuning started with: {N_TRIALS} trials')
 
     # start experiment
     experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
 
     with mlflow.start_run(run_name=config.hyperparameter_search_run_name, log_system_metrics=True):
-  
-        last_run = get_last_run(experiment_id, config.data_preprocessing_run_name)
-        last_run_id = last_run.run_id
         
-        train = download_dataset_as_artifact(last_run_id, 'train')
-
+        # get last finished run for data preprocessing
+        last_run_id = mlflow.search_runs(
+            experiment_ids=[experiment_id],
+            filter_string=f"tags.mlflow.runName = '{config.data_preprocessing_run_name}' and status = 'FINISHED'",
+            order_by=["start_time DESC"]
+        ).loc[0, 'run_id']
+        
+        # download train data from last run
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mlflow.artifacts.download_artifacts(run_id=last_run_id, artifact_path='datasets/train.csv', dst_path=tmpdir)
+            train = pd.read_csv(os.path.join(tmpdir, 'datasets/train.csv'))
+    
         # convert to DMatrix format
         features = [i for i in train.columns if i != 'target']
         dtrain = xgb.DMatrix(data=train.loc[:, features], label=train['target'])

@@ -3,12 +3,14 @@ version: '3.7'
 services:
   project:
     build:
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: docker/Dockerfile
     ports:
       - "8080:8080"
     volumes:
-      - ../../:/workspace
       - /Users/egorborisov/projects/mlflow_example/mlruns:/Users/egorborisov/projects/mlflow_example/mlruns
-    working_dir: /workspace
+    environment:
+      - MLFLOW_TRACKING_URI=file:///Users/egorborisov/projects/mlflow_example/mlruns
+    working_dir: /app
     command: >
       mlserver start .

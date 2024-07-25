@@ -1,14 +1,19 @@
 # data_preprocessing
+import sys
 import argparse
 import mlflow
 import warnings
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn import datasets
+from loguru import logger
 
-from config import config, logger
-from utils import upload_dataset_as_artifact
+from config import config
 
+# set up logging
+logger.remove()
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
+warnings.filterwarnings('ignore')
 
 def get_cancer_df():
     cancer = datasets.load_breast_cancer()
@@ -19,17 +24,14 @@ def get_cancer_df():
 
 
 if __name__ == '__main__':
-
+    
     TEST_SIZE = config.default_test_size
     # get arguments if running not in ipykernel
     parser = argparse.ArgumentParser()
     parser.add_argument("--test-size", default=config.default_test_size, type=float)
     TEST_SIZE = parser.parse_args().test_size
         
-
-    warnings.filterwarnings('ignore')
-    
-    logger.info('Data preprocessing started')
+    logger.info(f'Data preprocessing started with test size: {TEST_SIZE}')
     
     # create or use an experiment
     experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
@@ -52,8 +54,17 @@ if __name__ == '__main__':
         mlflow.log_metric('train_size', X_train.shape[0])
         mlflow.log_metric('test_size', X_test.shape[0])
         
-        # log datasets
-        upload_dataset_as_artifact(X_train.assign(target=y_train), 'train')
-        upload_dataset_as_artifact(X_test.assign(target=y_test), 'test')
+        # log and register datasets
+        train = X_train.assign(target=y_train)
+        mlflow.log_text(train.to_csv(index=False),'datasets/train.csv')
+        dataset_source_link = mlflow.get_artifact_uri('datasets/train.csv')
+        dataset = mlflow.data.from_pandas(train, name='train', targets="target", source=dataset_source_link)
+        mlflow.log_input(dataset)
+
+        test = X_test.assign(target=y_test)
+        mlflow.log_text(test.to_csv(index=False),'datasets/test.csv')
+        dataset_source_link = mlflow.get_artifact_uri('datasets/test.csv')
+        dataset = mlflow.data.from_pandas(train, name='test', targets="target", source=dataset_source_link)
+        mlflow.log_input(dataset)
         
         logger.info('Data preprocessing finished')

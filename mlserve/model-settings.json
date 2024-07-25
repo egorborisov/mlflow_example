@@ -1,0 +1,8 @@
+
+{
+    "name": "cancer-model",
+    "implementation": "mlserver_mlflow.MLflowRuntime",
+    "parameters": {
+        "uri": "models:/CustomCancerModel/1"
+    }
+}

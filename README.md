@@ -1,51 +1,69 @@
 # Mlflow Local Workflow Example
 
-Here we show a few steps of the machine learning lifecycle using an `XGBoost` example, focusing on integration with `MLflow`. We'll structure `MLflow` experiments and runs, perform hyperparameter optimizations with `Optuna`, and track all runs. We will use MLflow's capabilities to compare runs and adjust the best parameters. Additionally, we'll cover options to log the model and use it with different flavours, as well MLprojects packing and mlserving capabilities.
+This guide demonstrates key steps in the machine learning lifecycle using an `XGBoost` example, 
+focusing on integration with `MLflow`. The process includes structuring MLflow experiments and runs, 
+performing hyperparameter optimization with `Optuna`, and tracking all runs. Leveraging MLflow's capabilities, 
+it shows how to compare runs and fine-tune parameters for optimal performance. Additionally, 
+it explores options for logging the model and utilizing it with different flavors, 
+as well as covering MLproject packaging and MLflow's model serving capabilities.
 
-> You have two options to work with this example: you can either clone it and follow all the steps on your local machine, or simply go through this README file.
-
-> Our goal here is not to demonstrate best machine learning practices, but to highlight the capabilities of MLflow.
+> Two options are available for working with this example: either clone it and follow all the steps on your local machine, or simply review this `README`.
 
 ## Prepare env
 
-You will need `conda` installed on your machine first. Then run the following commands in you terminal. This script sets up the conda environment from `conda.yaml`, activate it and convert `modeling.py` back to a Jupyter notebook (`modeling.ipynb`) using jupytext.
+Ensure conda is installed on your machine. Then, execute the following commands in your terminal. 
+This script sets up the conda environment from conda.yaml, activates it, and converts modeling.py 
+back to a Jupyter notebook (modeling.ipynb) using jupytext.
 
-```shell
+```bash
 conda env create -f conda.yaml
 conda activate mlflow-example
 jupytext --to notebook modeling.py -o modeling.ipynb
 ```
 
-You may then use this environment in IDE or just call `jupyter notebook` and then navigate to `modeling.ipynb`.
-
-> It's not necessary to create an environment with conda; you can also use poetry or manually install all packages from a `conda.yaml`. However, MLflow has built-in compatibility with conda, which is why we're using it here.
+This environment can be used in an IDE or by calling `jupyter notebook` and navigating to `modeling.ipynb`.
 
 ## Run MLflow UI
-run from the terminal `mlflow ui --workers 1` to run MLflow with 1 worker on localhost:5000
-> By default, MLflow creates the mlruns folder in the project root to store all project files. If this folder already exists with data, consider deleting it first: `rm -rf mlruns`
+Start MLflow with one worker on localhost:5000 by running `mlflow ui` in the terminal. Then check it in your browser.
 
 ![](img/mlflow_main.png)
 
 
-## Experiments and tuning
-Here, we upload an open-source cancer dataset, build a classification model, use Optuna for hyperparameter selection with cross-validation, and log metrics and all steps in MLflow.
+## Modeling
+
+We will upload an open-source cancer dataset, develop a classification model, utilize `Optuna` for hyperparameter optimization with cross-validation, and log metrics along with all procedural steps in `MLflow`.
 
 ### Data preparation
-This step is usually more complicated, but here we'll just download the dataset, split it into training and testing sets, log a few metrics into MLflow (like the number of samples and features), and pass the datasets themselves to MLflow artifacts.
+This step is usually more complicated, but here we will simply download the dataset, split it into training and testing sets, log a few metrics into MLflow (such as the number of samples and features), and pass the datasets themselves to MLflow artifacts.
+> MLflow tracks your modeling with the concepts of [runs and experiments](https://mlflow.org/docs/latest/tracking.html). `Runs` represent executions of data science code, recording metadata (metrics, parameters, start and end times) and artifacts (output files like model weights and images). `Experiments` group runs for specific tasks.
+
+
+```python
+import os
+if 'MLFLOW_TRACKING_URI' in os.environ:
+    del os.environ['MLFLOW_TRACKING_URI']
+if 'MLFLOW_S3_ENDPOINT_URL' in os.environ:
+    del os.environ['MLFLOW_S3_ENDPOINT_URL']
+```
 
 
 ```python
 # data_preprocessing
+import sys
 import argparse
 import mlflow
 import warnings
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn import datasets
+from loguru import logger
 
-from config import config, logger
-from utils import upload_dataset_as_artifact
+from config import config
 
+# set up logging
+logger.remove()
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
+warnings.filterwarnings('ignore')
 
 def get_cancer_df():
     cancer = datasets.load_breast_cancer()
@@ -56,17 +74,14 @@ def get_cancer_df():
 
 
 if __name__ == '__main__':
-
+    
     TEST_SIZE = config.default_test_size
     # get arguments if running not in ipykernel
     # hide parser = argparse.ArgumentParser()
     # hide parser.add_argument("--test-size", default=config.default_test_size, type=float)
     # hide TEST_SIZE = parser.parse_args().test_size
         
-
-    warnings.filterwarnings('ignore')
-    
-    logger.info('Data preprocessing started')
+    logger.info(f'Data preprocessing started with test size: {TEST_SIZE}')
     
     # create or use an experiment
     experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
@@ -89,39 +104,70 @@ if __name__ == '__main__':
         mlflow.log_metric('train_size', X_train.shape[0])
         mlflow.log_metric('test_size', X_test.shape[0])
         
-        # log datasets
-        upload_dataset_as_artifact(X_train.assign(target=y_train), 'train')
-        upload_dataset_as_artifact(X_test.assign(target=y_test), 'test')
+        # log and register datasets
+        train = X_train.assign(target=y_train)
+        mlflow.log_text(train.to_csv(index=False),'datasets/train.csv')
+        dataset_source_link = mlflow.get_artifact_uri('datasets/train.csv')
+        dataset = mlflow.data.from_pandas(train, name='train', targets="target", source=dataset_source_link)
+        mlflow.log_input(dataset)
+
+        test = X_test.assign(target=y_test)
+        mlflow.log_text(test.to_csv(index=False),'datasets/test.csv')
+        dataset_source_link = mlflow.get_artifact_uri('datasets/test.csv')
+        dataset = mlflow.data.from_pandas(train, name='test', targets="target", source=dataset_source_link)
+        mlflow.log_input(dataset)
         
         logger.info('Data preprocessing finished')
 ```
 
-    2024-07-12 08:51:44 | INFO | Data preprocessing started
-    2024-07-12 08:51:44 | INFO | Cancer data downloaded
-    2024-07-12 08:51:44 | INFO | Additional features added
-    2024-07-12 08:51:44 | INFO | train uploaded
-    2024-07-12 08:51:44 | INFO | test uploaded
-    2024-07-12 08:51:44 | INFO | Data preprocessing finished
+    2024-07-26 00:58:29 | INFO | Data preprocessing started with test size: 0.33
+    2024-07-26 00:58:29 | INFO | Cancer data downloaded
+    2024-07-26 00:58:29 | INFO | Additional features added
+    2024-07-26 00:58:29 | INFO | Data preprocessing finished
 
+
+
+```python
+# save test locally for later use
+test.to_csv('test.csv', index=False)
+```
+
+This run must now be accessible through the UI, allowing us to review and verify that the metrics, parameters, and artifacts are correctly in place and ready for use. In the experiment, we see used datasets filed filled with datasets due to MLflow's dataset capabilities. However, it's important to understand that this represents metadata, not the actual data itself.
+ 
+> The `mlflow.data` module tracks dataset information during model training and evaluation, storing metadata such as features, targets, predictions, name, schema, and source. Log this metadata using the `mlflow.log_input()` API.
+
+
+![](img/data_preprocessing.png)
 
 ### Hyperparameters tuning
 
-
-In this part, we use Optuna to find the best hyperparameters for XGBoost, leveraging its built-in cross-validation for training and evaluation. Additionally, we'll show how to track metrics during the model fitting process using a custom callback.
+In this part, we use Optuna to find the best hyperparameters for `XGBoost`, leveraging its built-in cross-validation for training and evaluation. Additionally, we'll demonstrate how to track metrics during the model fitting process with a custom callback.
 
 
 ```python
 # hyperparameters_tuning
+import tempfile
+import sys
+import psutil
+import os
 import argparse
 import logging
 import warnings
 import mlflow
 import optuna
+import pandas as pd
 import xgboost as xgb
 from xgboost.callback import TrainingCallback
+from loguru import logger
 
-from config import config, logger
-from utils import download_dataset_as_artifact, get_last_run
+from config import config
+
+# set up logging
+logger.remove()
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
+warnings.filterwarnings('ignore')
+logging.getLogger('mlflow').setLevel(logging.ERROR)
+optuna.logging.set_verbosity(optuna.logging.ERROR)
 
 
 # Custom callback for logging metrics
@@ -174,23 +220,25 @@ if __name__ == '__main__':
     # hide parser.add_argument("--n-trials", default=config.default_n_trials, type=float)
     # hide N_TRIALS = parser.parse_args().n_trials
 
-    # set up logging
-    warnings.filterwarnings('ignore')
-    logging.getLogger('mlflow').setLevel(logging.ERROR)
-    optuna.logging.set_verbosity(optuna.logging.ERROR)
-
-    logger.info('Hyperparameters tuning started')
+    logger.info(f'Hyperparameters tuning started with: {N_TRIALS} trials')
 
     # start experiment
     experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
 
     with mlflow.start_run(run_name=config.hyperparameter_search_run_name, log_system_metrics=True):
-  
-        last_run = get_last_run(experiment_id, config.data_preprocessing_run_name)
-        last_run_id = last_run.run_id
         
-        train = download_dataset_as_artifact(last_run_id, 'train')
-
+        # get last finished run for data preprocessing
+        last_run_id = mlflow.search_runs(
+            experiment_ids=[experiment_id],
+            filter_string=f"tags.mlflow.runName = '{config.data_preprocessing_run_name}' and status = 'FINISHED'",
+            order_by=["start_time DESC"]
+        ).loc[0, 'run_id']
+        
+        # download train data from last run
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mlflow.artifacts.download_artifacts(run_id=last_run_id, artifact_path='datasets/train.csv', dst_path=tmpdir)
+            train = pd.read_csv(os.path.join(tmpdir, 'datasets/train.csv'))
+    
         # convert to DMatrix format
         features = [i for i in train.columns if i != 'target']
         dtrain = xgb.DMatrix(data=train.loc[:, features], label=train['target'])
@@ -208,91 +256,124 @@ if __name__ == '__main__':
         mlflow.log_metric('accuracy', 1 - study.best_value)
 ```
 
-    2024-07-12 08:52:07 | INFO | Hyperparameters tuning started
+    2024-07-26 00:58:35 | INFO | Hyperparameters tuning started with: 10 trials
 
 
 
     Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
 
 
-    2024-07-12 08:52:07 | INFO | train downloaded
-    2024-07-12 08:52:07 | INFO | Starting optuna study
-    2024-07-12 08:52:07 | INFO | Attempt: 0, Accuracy: 0.9553805774278216
-    2024-07-12 08:52:08 | INFO | Attempt: 1, Accuracy: 0.9448818897637795
-    2024-07-12 08:52:08 | INFO | Attempt: 2, Accuracy: 0.9501312335958005
-    2024-07-12 08:52:09 | INFO | Attempt: 3, Accuracy: 0.9606299212598425
-    2024-07-12 08:52:09 | INFO | Attempt: 4, Accuracy: 0.9501312335958005
-    2024-07-12 08:52:09 | INFO | Attempt: 5, Accuracy: 0.9553805774278216
-    2024-07-12 08:52:10 | INFO | Attempt: 6, Accuracy: 0.958005249343832
-    2024-07-12 08:52:11 | INFO | Attempt: 7, Accuracy: 0.9553805774278216
-    2024-07-12 08:52:11 | INFO | Attempt: 8, Accuracy: 0.958005249343832
-    2024-07-12 08:52:12 | INFO | Attempt: 9, Accuracy: 0.9606299212598425
-    2024-07-12 08:52:12 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 4, 'alpha': 0.007063471170035473, 'learning_rate': 0.3788377249938601, 'num_boost_round': 50}
-    2024-07-12 08:52:12 | INFO | Best trial Accuracy: 0.9606299212598425
+    2024-07-26 00:58:36 | INFO | Starting optuna study
+    2024-07-26 00:58:36 | INFO | Attempt: 0, Accuracy: 0.9606299212598425
+    2024-07-26 00:58:36 | INFO | Attempt: 1, Accuracy: 0.9606299212598425
+    2024-07-26 00:58:36 | INFO | Attempt: 2, Accuracy: 0.9606299212598425
+    2024-07-26 00:58:37 | INFO | Attempt: 3, Accuracy: 0.958005249343832
+    2024-07-26 00:58:37 | INFO | Attempt: 4, Accuracy: 0.9553805774278216
+    2024-07-26 00:58:37 | INFO | Attempt: 5, Accuracy: 0.931758530183727
+    2024-07-26 00:58:38 | INFO | Attempt: 6, Accuracy: 0.9553805774278216
+    2024-07-26 00:58:38 | INFO | Attempt: 7, Accuracy: 0.958005249343832
+    2024-07-26 00:58:39 | INFO | Attempt: 8, Accuracy: 0.9553805774278216
+    2024-07-26 00:58:39 | INFO | Attempt: 9, Accuracy: 0.9658792650918635
+    2024-07-26 00:58:39 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 6, 'alpha': 0.0419767722253065, 'learning_rate': 0.15627613497379575, 'num_boost_round': 239}
+    2024-07-26 00:58:39 | INFO | Best trial Accuracy: 0.9658792650918635
 
 
-### Review experiment resulst from MLflow UI
+### Review results from MLflow UI
+
 
 ![](img/runs_list.png)
 
-*Here, we use nested run capabilities to organize our runs within experiments with custom columns and ordering*
+It is possible to utilize nested run capabilities to structure project, as demonstrated in this example. Here, we have one parent run for hyperparameter tuning and collect all trials as nested runs. MLflow also provides the ability to customize the columns and order of rows in this view, enhancing the organization and readability of experiment data.
 
 ![](img/runs_charts.png)
 
-*We can use the chart view to compare runs and set up different plots. Here, we use XGBoost callbacks to log metrics during the model fitting process, allowing us to create plots with the number of trees on the x-axis.*
+The chart view allows for the comparison of runs and the setup of various plots. Using XGBoost callbacks to log metrics during the model fitting process enables the creation of plots with the number of trees on the x-axis.
 
 ![](img/compare_runs_counter_plot.png)
 
-*MLflow has an amazing feature to compare runs. To do this, you can select a few runs and push the compare button. Then, select the most useful view. This feature is especially valuable when trying to find optimal hyperparameters because you can guess and adjust the boundaries of possible intervals based on the comparison results.*
+MLflow allows for the comparison of runs. Select multiple runs, click the compare button, and choose the most useful view. This feature is particularly valuable when optimizing hyperparameters, as it helps refine and adjust the boundaries of possible intervals based on the comparison results.
 
-![Relative Path Image](img/system_metrics.png)
+![](img/system_metrics.png)
 
-*We can also track system metrics throughout the run. While this may not provide an exact estimate of the real project requirements, it can still be useful in some cases.*
+System metrics can also be tracked throughout the run. While this may not provide an exact estimate of the real project requirements, it can still be useful in certain cases.
 
 
-### Final model training
+### Log and register model
 
-It is possible, but not necessary, to save the model for each experiment and run. In most scenarios, it is better to save the parameters and then, once the final parameters are selected, perform an additional run to save the model. Here, we follow the same logic: we use the parameters from the best run to save the final model and register it for versioning and usage via a short link.
+It is possible, but not necessary, to save the model for each experiment and run. In most scenarios, it is better to save the parameters and then, once the final parameters are selected, perform an additional run to save the model. Here, we follow the same logic: using the parameters from the best run to save the final model and register it for versioning and usage via a short link.
+
+
+```python
+# convert this notebook to html in order to log it
+!jupyter nbconvert --to html modeling.ipynb
+```
+
+    [NbConvertApp] Converting notebook modeling.ipynb to html
+    [NbConvertApp] Writing 494401 bytes to modeling.html
+
 
 
 ```python
 # model_training
+import os
+import sys
+import tempfile
 import mlflow
 import warnings
 import logging
 import xgboost as xgb
-from mlflow.models import infer_signature
+import pandas as pd
+from loguru import logger
 
-from config import config, logger
-from utils import download_dataset_as_artifact, get_last_run, upload_dataset_as_artifact
+from config import config
+
+# set up logging
+warnings.filterwarnings('ignore')
+logging.getLogger('mlflow').setLevel(logging.ERROR)
+logger.remove()
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
 
 
 if __name__ == '__main__':
 
-    # set up logging
-    warnings.filterwarnings('ignore')
-    logging.getLogger('mlflow').setLevel(logging.ERROR)
-
     logger.info('Model training started')
-    
+ 
     mlflow.xgboost.autolog()
 
     experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
 
     with mlflow.start_run(run_name=config.training_run_name) as run:
         
-        # get data
-        last_data_run_id = get_last_run(experiment_id, config.data_preprocessing_run_name).run_id
-        train = download_dataset_as_artifact(last_data_run_id, 'train')
-        test = download_dataset_as_artifact(last_data_run_id, 'test')
+        run_id = run.info.run_id
+        logger.info(f'Start mlflow run: {run_id}')
+        
+        # get last finished run for data preprocessing
+        last_data_run_id = mlflow.search_runs(
+            experiment_ids=[experiment_id],
+            filter_string=f"tags.mlflow.runName = '{config.data_preprocessing_run_name}' and status = 'FINISHED'",
+            order_by=["start_time DESC"]
+        ).loc[0, 'run_id']
+    
+        # download train and test data from last run
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mlflow.artifacts.download_artifacts(run_id=last_data_run_id, artifact_path='datasets/train.csv', dst_path=tmpdir)
+            mlflow.artifacts.download_artifacts(run_id=last_data_run_id, artifact_path='datasets/test.csv', dst_path=tmpdir)
+            train = pd.read_csv(os.path.join(tmpdir, 'datasets/train.csv'))
+            test = pd.read_csv(os.path.join(tmpdir, 'datasets/test.csv'))
 
         # convert to DMatrix format
         features = [i for i in train.columns if i != 'target']
         dtrain = xgb.DMatrix(data=train.loc[:, features], label=train['target'])
         dtest = xgb.DMatrix(data=test.loc[:, features], label=test['target'])
+
+        # get last finished run for hyperparameters tuning
+        last_tuning_run = mlflow.search_runs(
+            experiment_ids=[experiment_id],
+            filter_string=f"tags.mlflow.runName = '{config.hyperparameter_search_run_name}' and status = 'FINISHED'",
+            order_by=["start_time DESC"]
+        ).loc[0, :]
         
-        # get params
-        last_tuning_run = get_last_run(experiment_id, config.hyperparameter_search_run_name)
+        # get best params
         params = {col.split('.')[1]: last_tuning_run[col] for col in last_tuning_run.index if 'params' in col}
         params.update(eval_metric=['auc', 'error'])
 
@@ -308,102 +389,193 @@ if __name__ == '__main__':
         )
 
         mlflow.log_metric("accuracy", 1 - model.best_score)
+        
+        # Log model as Booster
+        input_example = test.loc[0:10, features]
+        predictions_example = pd.DataFrame(model.predict(xgb.DMatrix(input_example)), columns=['predictions'])
+        mlflow.xgboost.log_model(model, "booster", input_example=input_example)
+        mlflow.log_text(predictions_example.to_json(orient='split', index=False), 'booster/predictions_example.json')
 
-        signature = infer_signature(test.loc[:,features], model.predict(dtest))
-        mlflow.xgboost.log_model(model, "booster", signature=signature)
-
-        # Register xgboost model
+        # Register model
         model_uri = f"runs:/{run.info.run_id}/booster"
         mlflow.register_model(model_uri, config.registered_model_name + 'Booster')
         
+        # Log model as sklearn completable XGBClassifier
         params.update(num_boost_round=model.best_iteration)
-        final_model = xgb.XGBClassifier(**params)
-        final_model.fit(train.loc[:, features], train['target'])
-        signature = infer_signature(test.loc[:, features], final_model.predict(test.loc[:, features]))
-            
-        mlflow.xgboost.log_model(final_model, "model", signature=signature)
+        model = xgb.XGBClassifier(**params)
+        model.fit(train.loc[:, features], train['target'])
+        mlflow.xgboost.log_model(model, "model", input_example=input_example)
 
-        # Log the datasets as artifacts
-        upload_dataset_as_artifact(train, 'train')
-        upload_dataset_as_artifact(test, 'test')
-
+        # log datasets
+        mlflow.log_text(train.to_csv(index=False), 'datasets/train.csv')
+        mlflow.log_text(test.to_csv(index=False),'datasets/test.csv')
+        
+        # log html with training notebook
+        mlflow.log_artifact(local_path='modeling.html')
+        
         logger.info('Model training finished')
 
         # Register the model
         model_uri = f"runs:/{run.info.run_id}/model"
         mlflow.register_model(model_uri, config.registered_model_name)
-
+        
         logger.info('Model registered')
 ```
 
-    2024-07-12 08:52:36 | INFO | Model training started
+    2024-07-26 00:58:48 | INFO | Model training started
+    2024-07-26 00:58:48 | INFO | Start mlflow run: 5afe79dd01a74362963c77da9ee7d91f
 
 
 
     Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
 
 
-    2024-07-12 08:52:37 | INFO | train downloaded
-
-
 
     Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
 
 
-    2024-07-12 08:52:37 | INFO | test downloaded
+    Successfully registered model 'CancerModelBooster'.
+    Created version '1' of model 'CancerModelBooster'.
 
 
-    Registered model 'CancerModelBooster' already exists. Creating a new version of this model...
-    Created version '5' of model 'CancerModelBooster'.
+    2024-07-26 00:59:06 | INFO | Model training finished
+    2024-07-26 00:59:06 | INFO | Model registered
 
 
-    2024-07-12 08:52:41 | INFO | train uploaded
-    2024-07-12 08:52:41 | INFO | test uploaded
-    2024-07-12 08:52:41 | INFO | Model training finished
-    2024-07-12 08:52:41 | INFO | Model registered
+    Successfully registered model 'CancerModel'.
+    Created version '1' of model 'CancerModel'.
 
 
-    Registered model 'CancerModel' already exists. Creating a new version of this model...
-    Created version '5' of model 'CancerModel'.
-
-
-After saving a model, we can access the artifacts page within the run and also check the model using the model tracking UI. We can save as many artifacts as we want, such as custom plots, text files, images, datasets, python scripts, or jupyter notebooks.
-
-![](img/model_artifacts.png)
-
-*Here, we have the model's input and output specifications, as well as the environment specification files used to create the model. This ensures the model will work as expected later on. Additionally, we manually add the training and test datasets to enable fully repeatable results. XGBoost autologging also adds feature importance as a plot and image.*
+Thanks to the `mlflow.xgboost.autolog()` feature, which works fine with the XGBoost training API, all metrics are automatically saved without the need for custom callbacks.
 
 ![](img/model_metrics.png)
 
-*Thanks to the `mlflow.xgboost.autolog()` feature, we have all parameters and metrics available without manual steps, callbacks, or additional configuration.*
+
+Once we save a model, we can access the `artifacts` page within the run. 
+
+![](img/model_artifacts.png)
+
+
+It is possible to store any type of file in artifacts, such as custom plots, text files, images, datasets, python scripts. For instance, I converted this notebook to `html` and saved it as an artifact, allowing it to be viewed directly in `mlflow ui`:
+
+![](img/logged_html.png)
+
+For each model, MLflow automatically creates a yaml configuration file called `MLmodel`. This file can be viewed directly in the MLflow UI or downloaded and inspected:
+
+
+
+```python
+from IPython.display import display, Markdown
+from pathlib import Path
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path='model/MLmodel', dst_path=tmpdir)
+    with open(Path(tmpdir) / 'model/MLmodel', 'rb') as f:
+        content = f.read().decode('utf-8')
+        display(Markdown(f"```yaml\n{content}\n```"))
+```
+
+
+    Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
+
+
+
+```yaml
+artifact_path: model
+flavors:
+  python_function:
+    data: model.xgb
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.xgboost
+    python_version: 3.11.4
+  xgboost:
+    code: null
+    data: model.xgb
+    model_class: xgboost.sklearn.XGBClassifier
+    model_format: xgb
+    xgb_version: 2.0.3
+mlflow_version: 2.14.2
+model_size_bytes: 47775
+model_uuid: 57d62c59d89a4e5bb77131c7f1d7a88c
+run_id: 5afe79dd01a74362963c77da9ee7d91f
+saved_input_example_info:
+  artifact_path: input_example.json
+  pandas_orient: split
+  type: dataframe
+signature:
+  inputs: '[{"type": "double", "name": "mean radius", "required": true}, {"type":
+    "double", "name": "mean texture", "required": true}, {"type": "double", "name":
+    "mean perimeter", "required": true}, {"type": "double", "name": "mean area", "required":
+    true}, {"type": "double", "name": "mean smoothness", "required": true}, {"type":
+    "double", "name": "mean compactness", "required": true}, {"type": "double", "name":
+    "mean concavity", "required": true}, {"type": "double", "name": "mean concave
+    points", "required": true}, {"type": "double", "name": "mean symmetry", "required":
+    true}, {"type": "double", "name": "mean fractal dimension", "required": true},
+    {"type": "double", "name": "radius error", "required": true}, {"type": "double",
+    "name": "texture error", "required": true}, {"type": "double", "name": "perimeter
+    error", "required": true}, {"type": "double", "name": "area error", "required":
+    true}, {"type": "double", "name": "smoothness error", "required": true}, {"type":
+    "double", "name": "compactness error", "required": true}, {"type": "double", "name":
+    "concavity error", "required": true}, {"type": "double", "name": "concave points
+    error", "required": true}, {"type": "double", "name": "symmetry error", "required":
+    true}, {"type": "double", "name": "fractal dimension error", "required": true},
+    {"type": "double", "name": "worst radius", "required": true}, {"type": "double",
+    "name": "worst texture", "required": true}, {"type": "double", "name": "worst
+    perimeter", "required": true}, {"type": "double", "name": "worst area", "required":
+    true}, {"type": "double", "name": "worst smoothness", "required": true}, {"type":
+    "double", "name": "worst compactness", "required": true}, {"type": "double", "name":
+    "worst concavity", "required": true}, {"type": "double", "name": "worst concave
+    points", "required": true}, {"type": "double", "name": "worst symmetry", "required":
+    true}, {"type": "double", "name": "worst fractal dimension", "required": true},
+    {"type": "double", "name": "additional_feature", "required": true}]'
+  outputs: '[{"type": "long", "required": true}]'
+  params: null
+utc_time_created: '2024-07-25 21:59:05.351899'
+
+```
+
+
+The `MLmodel` file supports multiple deployment `flavors`, including a generic python function and xgboost. It includes environment setups with both Conda (`conda.yaml`) and virtualenv (`python_env.yaml`). The model is an XGBoost classifier compatible with sklearn API, saved in the XGBoost format version 2.0.3. It tracks details such as model size, UUID, run ID, and creation time. We also provide an `example input` linked with the model and its `signature` - input and output specification. While the signature can be manually created and saved with the model, MLflow automatically generates the signature when an input example is provided.
+
+> In the MLflow ecosystem, `flavors` are wrappers for specific machine learning libraries, allowing consistent saving, logging, and retrieval of models. This ensures uniform `predict` method behavior across different frameworks for streamlined model management and deployment.
+
+> In addition to the input example, it is beneficial to include calculated predictions for this example. This allows immediate testing of the model after loading it, ensuring it performs correctly in different environment setups.
+
 
 ### Built in evaluation
 
-We can leverage MLflow's built-in ability to evaluate additional datasets, even if they were not available during training. By using the evaluate method, we can also enhance it by logging additional metrics if desired.
+MLflow's built-in capability allows evaluation (`mlflow.evaluate`) of models on additional datasets, even those not available during training
 
 
 ```python
 # data_evaluation
+import sys
+import os
 import argparse
 import warnings
 import logging
 import mlflow
 import pandas as pd
+from loguru import logger
 
-from utils import get_last_run, download_dataset_as_artifact
-from config import config, logger
+from config import config
+
+logger.remove()
+logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
+warnings.filterwarnings('ignore')
+logging.getLogger('mlflow').setLevel(logging.ERROR)
+
 
 if __name__ == '__main__':
 
-    warnings.filterwarnings('ignore')
-    logging.getLogger('mlflow').setLevel(logging.ERROR)
-    
     logger.info('Evaluation started')
 
     experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
-
-    last_data_run_id = get_last_run(experiment_id, config.data_preprocessing_run_name).run_id
-    eval_dataset = download_dataset_as_artifact(last_data_run_id, 'test')
+    
+    if 'test.csv' in os.listdir():
+        eval_dataset = pd.read_csv('test.csv')
     # hide parser = argparse.ArgumentParser()
     # hide parser.add_argument("--eval-dataset", type=str)
     # hide eval_dataset = pd.read_csv(parser.parse_args().eval_dataset)
@@ -420,37 +592,28 @@ if __name__ == '__main__':
         logger.success('Evaluation finished')
 ```
 
-    2024-07-12 08:52:48 | INFO | Evaluation started
+    2024-07-26 00:59:27 | INFO | Evaluation started
+    2024-07-26 00:59:36 | SUCCESS | Evaluation finished
 
 
-
-    Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
-
-
-    2024-07-12 08:52:49 | INFO | test downloaded
-    2024-07-12 08:52:57 | SUCCESS | Evaluation finished
-
-
-> Here we utilize `MLflow Dataset` functionality. Datasets allow tracking metadata for files in runs, including columns, hash, and source link. We can also run the `mlflow.evaluate` command for an already created `MLflow dataset`.
-
-We can then observe the results in the `mlflow ui`. Here, mlflow generates numerous metrics and plots for us, including `roc-auc`, `confusion matrices`, and `shap plots` (if SHAP is installed)
+The results can be viewed in the `mlflow ui`, where various metrics and plots are provided, including `roc-auc`, `confusion matrices`, and `shap plots` (if shap is installed).
 
 ![](img/shap_plot.png)
 
 
 ## MLflow Projects
 
-The next step might be to share your project with other data scientists or to automate the running of your model training pipeline. This is where MLflow Projects come in.
 
-> An MLflow Project packages data science code in a reusable and reproducible way, following conventions that make it easy for others (or automated tools) to run. Each project is a directory of files or a Git repository containing your code. MLflow can run these projects based on specific conventions for organizing files in the directory. 
+Next, you might want to share your project with other data scientists or automate your model training pipeline. This is where MLflow Projects come in.
 
-First, we'll convert our main code cells into Python files using the `nbformat` library. We'll create a separate Python file for each cell, based on comment lines at the top of each cell that specify the predefined names for the files.
+> An MLflow Project packages data science code in a reusable and reproducible way, following conventions that make it easy for others (or automated tools) to run. Each project is a directory of files or a git repository containing your code. MLflow can run these projects based on specific conventions for organizing files in the directory. 
+
+First, the main code cells will be converted into Python files using the nbformat library. A separate Python file will be created for each cell, based on comment lines at the top of each cell that specify the predefined names for the files.
 
 
 ```python
 import nbformat
-
-from config import logger
+from pathlib import Path
 
 def extract_and_save_cell(notebook_path, comment):
     # Load the notebook
@@ -482,10 +645,10 @@ def extract_and_save_cell(notebook_path, comment):
     processed_content = '\n'.join(processed_lines)
 
     # Save the extracted and processed content to a Python file
-    with open(f'{comment}.py', 'w', encoding='utf-8') as f:
+    with open(Path('mlproject') / f'{comment}.py', 'w', encoding='utf-8') as f:
         f.write(processed_content)
 
-    logger.info(f'{comment}.py saved')
+    print(f'{comment}.py saved')
 
 
 if __name__ == '__main__':
@@ -493,14 +656,21 @@ if __name__ == '__main__':
         extract_and_save_cell('modeling.ipynb', comment)
 ```
 
-    2024-07-12 08:53:09 | INFO | data_preprocessing.py saved
-    2024-07-12 08:53:09 | INFO | hyperparameters_tuning.py saved
-    2024-07-12 08:53:09 | INFO | model_training.py saved
-    2024-07-12 08:53:09 | INFO | data_evaluation.py saved
+    data_preprocessing.py saved
+    hyperparameters_tuning.py saved
+    model_training.py saved
+    data_evaluation.py saved
 
+
+
+```python
+# copy config and env files to mlproject folder
+!cp config.py conda.yaml modeling.html test.csv mlproject
+```
 
 ### Conda env export
-We already have a conda.yaml file, but its creation can be complex and require manual steps. Exporting the current environment with `conda env export > conda.yaml` may not be suitable for sharing or `Docker` use due to platform-specific issues. Adding the `--from-history` flag lists only explicitly requested packages but may fail with pip-installed packages. Using `pip freeze` includes local package links. Thus, manually creating a `requirements.txt` file or `conda.yaml` might be the best solution.
+
+Creating a `conda.yaml` file can be complex and often requires manual steps. Exporting the current environment with `conda env export` may not be ideal for sharing or docker use due to platform-specific issues. Adding the `--from-history` flag lists only explicitly requested packages but fail with `pip-installed` packages. Using `pip freeze` includes local package links. Therefore, manually creating a `requirements.txt` file or `conda.yaml` might be the best solution.
 
 ### MLproject file
 
@@ -509,7 +679,7 @@ The `MLproject` file helps MLflow and others understand and run your project by 
 
 ```python
 from IPython.display import Markdown, display
-with open('MLproject', 'r') as file:
+with open('mlproject/MLproject', 'r') as file:
     mlproject_content = file.read()
 
 # Display the contents as a Markdown code snippet
@@ -542,14 +712,14 @@ entry_points:
 
 
 ### Mlflow run
-We can run project endpoints using either the CLI or the Python API.
+Project endpoints can be executed via the cli (`mlflow run`) or the python api (`mlflow.run`).
 
 > The `mlflow run` command sets the experiment and creates a run before executing the python script. Therefore, if we use the same commands inside our Python code with specified names, it is important to use the same names in this command.
 
 
 ```python
 mlflow.run(
-    uri = '.',
+    uri = 'mlproject',
     entry_point = 'data-preprocessing',
     env_manager='local',
     experiment_name=config.experiment_name,
@@ -558,18 +728,16 @@ mlflow.run(
 )
 ```
 
-    2024-07-12 08:53:19 | INFO | Data preprocessing started
-    2024-07-12 08:53:19 | INFO | Cancer data downloaded
-    2024-07-12 08:53:19 | INFO | Additional features added
-    2024-07-12 08:53:19 | INFO | train uploaded
-    2024-07-12 08:53:19 | INFO | test uploaded
-    2024-07-12 08:53:19 | INFO | Data preprocessing finished
+    2024-07-26 01:01:25 | INFO | Data preprocessing started with test size: 0.5
+    2024-07-26 01:01:25 | INFO | Cancer data downloaded
+    2024-07-26 01:01:25 | INFO | Additional features added
+    2024-07-26 01:01:25 | INFO | Data preprocessing finished
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x1736728d0>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x15c89fed0>
 
 
 
@@ -578,7 +746,7 @@ Here, we run a second endpoint with a conda environment, creating an additional 
 
 ```python
 mlflow.run(
-    uri = '.',
+    uri = 'mlproject',
     entry_point = 'hyperparameters-tuning',
     env_manager='conda',
     experiment_name=config.experiment_name,
@@ -587,32 +755,41 @@ mlflow.run(
 )
 ```
 
-    2024-07-12 08:53:24 | INFO | Hyperparameters tuning started
-    2024-07-12 08:53:24 | INFO | train downloaded
-    2024-07-12 08:53:24 | INFO | Starting optuna study
+    Channels:
+     - conda-forge
+     - defaults
+    Platform: osx-arm64
+    Collecting package metadata (repodata.json): ...working... done
+    Solving environment: ...working... done
+    Preparing transaction: ...working... done
+    Verifying transaction: ...working... done
+    Executing transaction: ...working... done
+    Installing pip dependencies: ...working... done
+    2024-07-26 01:02:22 | INFO | Hyperparameters tuning started with: 3.0 trials
+    2024-07-26 01:02:22 | INFO | Starting optuna study
 
 
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1747.63it/s]
+    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 6403.52it/s] 
 
 
-    2024-07-12 08:53:25 | INFO | Attempt: 0, Accuracy: 0.9576707726763718
-    2024-07-12 08:53:25 | INFO | Attempt: 1, Accuracy: 0.9541620007465472
-    2024-07-12 08:53:26 | INFO | Attempt: 2, Accuracy: 0.9541620007465472
-    2024-07-12 08:53:26 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 7, 'alpha': 0.03696224965168004, 'learning_rate': 0.18288024959959415, 'num_boost_round': 281}
-    2024-07-12 08:53:26 | INFO | Best trial Accuracy: 0.9576707726763718
+    2024-07-26 01:02:23 | INFO | Attempt: 0, Accuracy: 0.9612541993281075
+    2024-07-26 01:02:24 | INFO | Attempt: 1, Accuracy: 0.9647256438969765
+    2024-07-26 01:02:24 | INFO | Attempt: 2, Accuracy: 0.9647629712579321
+    2024-07-26 01:02:24 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 8, 'alpha': 0.03224719758630693, 'learning_rate': 0.15813200031767036, 'num_boost_round': 290}
+    2024-07-26 01:02:24 | INFO | Best trial Accuracy: 0.9647629712579321
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x280d54f50>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x15c8dd150>
 
 
 
 
 ```python
 mlflow.run(
-    uri = '.',
+    uri = 'mlproject',
     entry_point = 'model-training',
     env_manager='conda',
     experiment_name=config.experiment_name,
@@ -620,44 +797,38 @@ mlflow.run(
 )
 ```
 
-    2024-07-12 08:53:30 | INFO | Model training started
-    2024-07-12 08:53:30 | INFO | train downloaded
-    2024-07-12 08:53:30 | INFO | test downloaded
+    2024-07-26 01:02:29 | INFO | Model training started
+    2024-07-26 01:02:29 | INFO | Start mlflow run: 2af2229d041640028bd04ef8f18e0d5e
 
 
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 5071.71it/s]
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1691.93it/s]
+    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 4877.10it/s] 
+    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1604.55it/s]
     Registered model 'CancerModelBooster' already exists. Creating a new version of this model...
-    Created version '6' of model 'CancerModelBooster'.
+    Created version '2' of model 'CancerModelBooster'.
 
 
-    2024-07-12 08:53:35 | INFO | train uploaded
-    2024-07-12 08:53:35 | INFO | test uploaded
-    2024-07-12 08:53:35 | INFO | Model training finished
-    2024-07-12 08:53:35 | INFO | Model registered
+    2024-07-26 01:02:34 | INFO | Model training finished
+    2024-07-26 01:02:34 | INFO | Model registered
 
 
     Registered model 'CancerModel' already exists. Creating a new version of this model...
-    Created version '6' of model 'CancerModel'.
+    Created version '2' of model 'CancerModel'.
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x2807e2310>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x15c923110>
 
 
 
 
 ```python
 # get data
-last_data_run_id = get_last_run(experiment_id, config.data_preprocessing_run_name).run_id
-test = download_dataset_as_artifact(last_data_run_id, 'test')
-test.to_csv('test.csv')
 path = str(config.project_root / 'test.csv')
 
 mlflow.run(
-    uri = '.',
+    uri = 'mlproject',
     entry_point = 'data-evaluation',
     env_manager='conda',
     experiment_name=config.experiment_name,
@@ -666,33 +837,29 @@ mlflow.run(
 )
 ```
 
-
-    Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
-
-
-    2024-07-12 08:53:36 | INFO | test downloaded
-    2024-07-12 08:53:37 | INFO | Evaluation started
-    2024-07-12 08:53:37 | INFO | test downloaded
-
-
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 4975.45it/s]
-
-
-    2024-07-12 08:53:51 | SUCCESS | Evaluation finished
+    2024-07-26 01:02:37 | INFO | Evaluation started
+    2024-07-26 01:02:49 | SUCCESS | Evaluation finished
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x281097bd0>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x15c89c190>
 
 
 
 ### Docker setup
 
-`Dockerfile` and `docker-compose` stored in the docker/mlproject folder. Docker image based on slim Python and install dependencies from a manually created `requirments.txt`. `docker-compose` mounts working directory to a volume to access files and log all MLflow activities in the `mlruns` folder. In a production environment, we might run this command from an orchestration tool and provide the MLFLOW_TRACKING_URI to a remote MLflow server. You can run `docker-compose -f mlproject_docker/docker-compose.yml build` to build the image and then `docker-compose -f mlproject_docker/docker-compose.yml` up to run it.
+`Dockerfile` and `docker compose` stored in the `mlproject/docker` folder. Docker image based on slim Python and install dependencies from a manually created `requirments.txt`. `docker compose` mounts `mlruns` directory to a volume to log all MLflow activities in the sa,e `mlruns` folder. In a production environment, we might run this command from an orchestration tool and provide MLFLOW_TRACKING_URI to the remote MLflow server. You can run `docker compose -f mlproject/docker/docker-compose.yml build` to build the image and then `docker compose -f mlproject/docker/docker-compose.yml up` to run it.
 
-> We need to mount the absolute path to the `mlruns` folder in the project root to log and retrieve artifacts. This is necessary because local MLflow tracking uses absolute paths.
+> We need to mount the absolute path to the `mlruns` folder in the project root to log and retrieve artifacts. This is necessary because local MLflow artifact methods uses absolute paths.
+
+## MLmodel: flavours
+
+In MLflow, models can be loaded using different flavors specified in the `MLmodel` file. We save two versions of the model both with xgboost, each have two flavors: `python_function` and `xgboost`. The difference lies in the model class: for the `booster`, it is `xgboost.core.Booster`, and for the `model`, it is `xgboost.sklearn.XGBClassifier`, which supports a scikit-learn compatible API. These differences affect how the predict method works, so it is important to review the `MLmodel` file and check the model signature before using it.
+
+
+When loading the `booster` model with the `xgboost`, the model expects the input data to be in the form of a `DMatrix` object and `predict` method will produce scores (not classes) in our case.
 
 
 ```python
@@ -703,27 +870,13 @@ mlflow.run(
     Exception reporting mode: Minimal
 
 
-## MLmodel: flavours
-
-In MLflow, models can be loaded using different flavors specified in the `MLmodel` file. We save two versions of the model both with xgboost, each have two flavors: `python_function` and `xgboost`. The difference lies in the model class: for the `booster`, it is `xgboost.core.Booster`, and for the `model`, it is `xgboost.sklearn.XGBClassifier`, which supports a scikit-learn compatible API. These two cases differ in how the predict method works, so it is important to review the MLmodel file and check the model signature before using it.
-
-
-When loading the `booster` model with the `xgboost`, the model expects the input data to be in the form of a `DMatrix` object and `predict` method will produce scores (not classes) in our case.
-
 
 ```python
 import mlflow
 import xgboost as xgb
 
-from config import config, logger
-from utils import get_last_run, download_dataset_as_artifact
-
-# prepare data
-experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
-last_data_run_id = get_last_run(experiment_id, config.data_preprocessing_run_name).run_id
-test = download_dataset_as_artifact(last_data_run_id, 'test')
-features = [i for i in test.columns if i != 'target']
-dtest = xgb.DMatrix(data=test.loc[:, features], label=test['target'])
+test = pd.read_csv('test.csv')
+dtest = xgb.DMatrix(data=test.loc[:, [i for i in test.columns if i != 'target']], label=test['target'])
 test.drop('target', axis=1, inplace=True)
 
 # download booster with xgboost flavour
@@ -732,21 +885,15 @@ xgboost_booster = mlflow.xgboost.load_model(logged_model)
 ```
 
 
-    Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
-
-
-    2024-07-12 00:59:08 | INFO | test downloaded
-
-
-
 ```python
 # error with pandas input
-xgboost_booster.predict(test)
+try:
+    xgboost_booster.predict(test)
+except Exception as e:
+    print(e)
 ```
 
-
-    TypeError: ('Expecting data to be a DMatrix object, got: ', <class 'pandas.core.frame.DataFrame'>)
-
+    ('Expecting data to be a DMatrix object, got: ', <class 'pandas.core.frame.DataFrame'>)
 
 
 
@@ -758,7 +905,7 @@ xgboost_booster.predict(dtest)[:3]
 
 
 
-    array([0.9881982 , 0.9896479 , 0.01500983], dtype=float32)
+    array([0.97777414, 0.06380725, 0.98260695], dtype=float32)
 
 
 
@@ -777,26 +924,20 @@ pyfunc_booster.predict(test)[:3]
 
 
 
-    array([0.9881982 , 0.9896479 , 0.01500983], dtype=float32)
+    array([0.97777414, 0.06380725, 0.98260695], dtype=float32)
 
 
 
 
 ```python
 # error with DMatrix
-pyfunc_booster.predict(dtest)
+try:
+    pyfunc_booster.predict(dtest)
+except Exception as e:
+    print(e)
 ```
 
-
-    MlflowException: Expected input to be DataFrame. Found: DMatrix
-
-
-    
-    During handling of the above exception, another exception occurred:
-
-
-    MlflowException: Failed to enforce schema of data '<xgboost.core.DMatrix object at 0x168fe3bd0>' with schema '['mean radius': double (required), 'mean texture': double (required), 'mean perimeter': double (required), 'mean area': double (required), 'mean smoothness': double (required), 'mean compactness': double (required), 'mean concavity': double (required), 'mean concave points': double (required), 'mean symmetry': double (required), 'mean fractal dimension': double (required), 'radius error': double (required), 'texture error': double (required), 'perimeter error': double (required), 'area error': double (required), 'smoothness error': double (required), 'compactness error': double (required), 'concavity error': double (required), 'concave points error': double (required), 'symmetry error': double (required), 'fractal dimension error': double (required), 'worst radius': double (required), 'worst texture': double (required), 'worst perimeter': double (required), 'worst area': double (required), 'worst smoothness': double (required), 'worst compactness': double (required), 'worst concavity': double (required), 'worst concave points': double (required), 'worst symmetry': double (required), 'worst fractal dimension': double (required), 'additional_feature': double (required)]'. Error: Expected input to be DataFrame. Found: DMatrix
-
+    Failed to enforce schema of data '<xgboost.core.DMatrix object at 0x15cc2f6d0>' with schema '['mean radius': double (required), 'mean texture': double (required), 'mean perimeter': double (required), 'mean area': double (required), 'mean smoothness': double (required), 'mean compactness': double (required), 'mean concavity': double (required), 'mean concave points': double (required), 'mean symmetry': double (required), 'mean fractal dimension': double (required), 'radius error': double (required), 'texture error': double (required), 'perimeter error': double (required), 'area error': double (required), 'smoothness error': double (required), 'compactness error': double (required), 'concavity error': double (required), 'concave points error': double (required), 'symmetry error': double (required), 'fractal dimension error': double (required), 'worst radius': double (required), 'worst texture': double (required), 'worst perimeter': double (required), 'worst area': double (required), 'worst smoothness': double (required), 'worst compactness': double (required), 'worst concavity': double (required), 'worst concave points': double (required), 'worst symmetry': double (required), 'worst fractal dimension': double (required), 'additional_feature': double (required)]'. Error: Expected input to be DataFrame. Found: DMatrix
 
 
 
@@ -808,7 +949,7 @@ pyfunc_booster._model_impl.xgb_model.predict(dtest)[:3]
 
 
 
-    array([0.9881982 , 0.9896479 , 0.01500983], dtype=float32)
+    array([0.97777414, 0.06380725, 0.98260695], dtype=float32)
 
 
 
@@ -823,25 +964,22 @@ xgboost_model = mlflow.xgboost.load_model(logged_model)
 
 ```python
 # predict method produce classes not probs - work with pandas
-xgboost_model.predict(test)[:3]
+try:
+    xgboost_model.predict(test.loc[:,features])[:3]
+except Exception as e:
+    print(e)
 ```
-
-
-
-
-    array([1, 1, 0])
-
-
 
 
 ```python
 # not able to work with DMatrix
-xgboost_model.predict(dtest)[:3]
+try:
+    xgboost_model.predict(dtest)[:3]
+except Exception as e:
+    print(e)
 ```
 
-
-    TypeError: Not supported type for data.<class 'xgboost.core.DMatrix'>
-
+    Not supported type for data.<class 'xgboost.core.DMatrix'>
 
 
 
@@ -858,7 +996,7 @@ Since the pyfunc model has some additional overhead, performance is slightly wor
 xgboost_booster.predict(xgb.DMatrix(test))
 ```
 
-    1.66 ms ± 67.7 μs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+    1.68 ms ± 244 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
 
 
 
@@ -867,7 +1005,7 @@ xgboost_booster.predict(xgb.DMatrix(test))
 pyfunc_booster.predict(test)
 ```
 
-    1.92 ms ± 46.3 μs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+    1.91 ms ± 70.8 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
 
 
 
@@ -876,7 +1014,7 @@ pyfunc_booster.predict(test)
 xgboost_model.predict(test)
 ```
 
-    1.5 ms ± 8.89 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
+    1.39 ms ± 2.05 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
 
 
 
@@ -885,42 +1023,53 @@ xgboost_model.predict(test)
 pyfunc_model.predict(test)
 ```
 
-    1.81 ms ± 31.7 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
+    1.68 ms ± 28.8 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
 
 
 ## Model Serving
-MLflow has built-in capabilities to serve models locally (though it also integrates with SageMaker and Kubernetes, which we won't cover here). Serving a model with flask is pretty straightforward: `mlflow models serve -m models:/CancerModel/1 -p 5050 --env-manager local`. But we also may utilize `mlserver` and to do it properly we may first install `mlserver`, `mlserver-mlflow`, `mlserver-xgboost` and create json config file:
 
+MLflow has built-in capabilities to serve models. Serving a model with flask is pretty straightforward: `mlflow models serve -m models:/CancerModel/1 --env-manager local`. But we also may utilize `mlserver` and to do it properly we may first install  and create json config file:
+
+### Mlserver
+It is also possible to use built-in integration with MLServer
+
+> The `mlserver` package facilitates efficient deployment and serving of machine learning models with support for multiple frameworks, using REST and gRPC interfaces. It integrates with seldon core for scalable and robust model management and monitoring.
+
+You might need to install the following packages: `mlserver`, `mlserver-mlflow`, `mlserver-xgboost` if you use your own environment. We can then set up a config file for `MLServer`. This allows us to modify how the API will work; here, we just set up a alias for the model:
 
 
 ```python
-from IPython.display import Markdown, display
-with open('model-settings.json', 'r') as file:
-    content = file.read()
+%%writefile mlserve/model-settings.json
 
-# Display the contents as a Markdown code snippet
-display(Markdown(f"```json\n{content}\n```"))
-```
-
-
-```json
 {
-  "name": "cancer-model",
-  "implementation": "mlserver_mlflow.MLflowRuntime",
-  "parameters": {
-    "uri": "models:/CancerModel/1"
-  }
+    "name": "cancer-model",
+    "implementation": "mlserver_mlflow.MLflowRuntime",
+    "parameters": {
+        "uri": "models:/CancerModel/1"
+    }
 }
 ```
 
+    Overwriting mlserve/model-settings.json
 
-You may also start from docker setup: `docker-compose -f docker/mlserve/docker-compose.yml build` and `docker-compose -f docker/mlserve/docker-compose.yml up`
 
-Then, we can run `mlserver start .` and it's done. After that, we can check the documentation for our model and inspect the expected data structure via swagger:
+To start from local env we can use `mlserver start mlserve`, to start from the Docker setup, you can use the following commands: `docker compose -f mlserve/docker/docker-compose.yml build` and `docker compose -f mlserve/docker/docker-compose.yml up`. 
+
+> It's great that we have a working API with `openapi` documentation, request validation, `HTTP` and `gRPC` servers, and prometheus scrapping endpoint. And the best part is that all of this is achieved without any coding, just by providing a simple JSON configuration.
+
+> An alternative to this approach is writing a new API from scratch. This might be preferable when we need more flexibility, additional functionality, or when fitting within time constraints, as the MLServer approach can introduce some overhead and may be slightly slower.
+
+We can check the documentation for our model and inspect the expected data structure via swagger `/v2/models/cancer/model/docs`
 
 ![](img/mlserver.png)
 
-And query it with our dataset:
+We can access the metrics endpoint or configure Prometheus to scrape it in production environments.
+
+![](img/metrics_endpoint.png)
+
+*`mlserver` offers various customization please refer to the [documentation](https://mlserver.readthedocs.io/en/stable/) for more details.*
+
+Then it is possible to query the served model from a given endpoint and port:
 
 
 ```python
@@ -931,6 +1080,9 @@ url = "http://127.0.0.1:8080/invocations"
 
 # convert df do split format and then to json
 input_data = json.dumps({
+    "params": {
+      'method': 'proba',  
+    },
     'dataframe_split': {
         "columns": test.columns.tolist(),
         "data": test.values.tolist()
@@ -947,52 +1099,56 @@ else:
     print("Error:", response.status_code, response.text)
 ```
 
-    Prediction: {'predictions': [1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1]}
+    Prediction: {'predictions': [1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1]}
 
 
-We already serve the model and can query it!
-
-### Customize model serving
-We may then decide to customize our model, for example, to respond with probabilities and add additional logging. We can implement this using a custom wrapper.
+### Customize model
+We can customize our model to provide probabilities or include specific logging features. To do this, we will first obtain the model and then encapsulate it with a custom wrapper.
 
 
 ```python
+import mlflow
+import mlflow.xgboost
+import mlflow.pyfunc
+
 # Step 1: Download the Existing Model from MLflow
 model_uri = "models:/CancerModel/1"
 model = mlflow.xgboost.load_model(model_uri)
 
-# Step 2: Create a Custom Wrapper Around the Model
-class CustomModelWrapper:
+
+# Step 2: Define the Custom PyFunc Model with `loguru` Setup in `load_context`
+class CustomPyFuncModel(mlflow.pyfunc.PythonModel):
     
     def __init__(self, model):
         self.model = model
-
-    def predict(self, X):
-        probabilities = self.model.predict_proba(X)[:,1]
-        return probabilities
-
-# Wrap the downloaded model
-custom_model = CustomModelWrapper(model)
-
-# Step 3: Define the Custom PyFunc Model with `loguru` Setup in `load_context`
-class CustomPyFuncModel(mlflow.pyfunc.PythonModel):
-    def __init__(self, model):
-        self.model = model
-
+        
+    def get_logger(self):
+        from loguru import logger
+        logger.remove()
+        logger.add("mlserve/mlserver_logs.log", format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
+        return logger
+        
     def load_context(self, context):
-        pass
-
+        self.logger = self.get_logger()
 
     def predict(self, context, model_input):
-        probabilities = self.model.predict(model_input)
-        return probabilities
+        
+        self.logger.info(f"start request")
+        self.logger.info(f"batch size: {len(model_input)}")
+        
+        predict =  self.model.predict_proba(model_input)[:,1]
+        
+        self.logger.success(f"Finish request")
+        
+        return predict
+        
 
-# Step 4: Save the Wrapped Model Back to MLflow
+# Step 3: Save the Wrapped Model Back to MLflow
 with mlflow.start_run() as run:
     mlflow.pyfunc.log_model(
         artifact_path="custom_model",
-        python_model=CustomPyFuncModel(custom_model),
-        registered_model_name="CustomCancerModel"
+        python_model=CustomPyFuncModel(model),
+        registered_model_name="CustomCancerModel",
     )
 ```
 
@@ -1000,23 +1156,26 @@ with mlflow.start_run() as run:
     Created version '1' of model 'CustomCancerModel'.
 
 
-After changing the model name in the config and rerunning the container, we may observe that the model starts responding with probabilities
+
+```python
+%%writefile mlserve/model-settings.json
+
+{
+    "name": "cancer-model",
+    "implementation": "mlserver_mlflow.MLflowRuntime",
+    "parameters": {
+        "uri": "models:/CustomCancerModel/1"
+    }
+}
+```
+
+    Overwriting mlserve/model-settings.json
+
+
+We can then run `mlserver` again, query the `API` to obtain probabilities instead of classes, and implement our custom `logging`.
 
 
 ```python
-import requests
-import json
-
-url = "http://127.0.0.1:8080/invocations"
-
-# convert df do split format and then to json
-input_data = json.dumps({
-    'dataframe_split': {
-        "columns": test.columns.tolist(),
-        "data": test.values.tolist()
-    }
-})
-
 # Send a POST request to the MLflow model server
 response = requests.post(url, data=input_data, headers={"Content-Type": "application/json"})
 
@@ -1027,20 +1186,199 @@ else:
     print("Error:", response.status_code, response.text)
 ```
 
-    Prediction: [0.9957305788993835, 0.9979894161224365, 0.004697034601122141, 0.9994956254959106, 0.9846009612083435, 0.019780341535806656, 0.006149278022348881, 0.9992685914039612, 0.9983139038085938, 0.9988442659378052]
+    Prediction: [0.9983189702033997, 0.012808178551495075, 0.9990600943565369, 0.0020538433454930782, 0.9634535312652588, 0.9810457229614258, 0.9811365008354187, 0.9993348717689514, 0.9982637763023376, 0.0009343980345875025]
+
+
+
+```python
+from IPython.display import Markdown, display
+with open('mlserve/mlserver_logs.log', 'r') as file:
+    mlproject_content = file.read()
+
+# Display the contents as a Markdown code snippet
+display(Markdown(f"```\n{mlproject_content}\n```"))
+```
+
+
+```python
+2024-07-26 01:08:22 | INFO | start request
+2024-07-26 01:08:22 | INFO | batch size: 188
+2024-07-26 01:08:22 | SUCCESS | Finish request
+
+```
 
 
 > While this method works, it might be more straightforward to set up a custom web server if we want to incorporate more complex logic rather than using the built-in tools.
 
-## Other tricks
-A better option for collaboration is to set up a remote MLflow tracking server to work together. However, if that's not possible, you can share your `mlruns` folder with colleagues and use it together to share experiments. You can add it to a git repository if it doesn't contain sensitive information. If you use different experiments and models, it will probably not cause any issues. However, keep in mind that this approach might lead to conflicts and may require additional communication and rules within the team.
+> In case of a regular model training pipeline, redeploying the service or updating the model version in the current API is not handled by the open-source version of MLflow. The custom Databricks version includes a webhook feature that allows MLflow to notify the API serving remotely about new versions. Another option is to trigger deployment when the model is updated. We could also expose an additional endpoint in the server and call it within a DAG, or we could have the server query MLflow periodically for updates.
 
-You may also change your local tracking folder if you would like to have multiple separate MLflow instances. Let's see how it works for a local setup.
+## MLflow Tracking Server
 
-1. Start the MLflow UI with the new folder as the backend store: `poetry run mlflow ui --backend-store-uri ./mlruns_new --workers 1`
-2. chnage tracking uri in you code: `mlflow.set_tracking_uri("file:./mlruns_new")`
+### MLflow Local Setup
+We've been working on setting up MLflow locally, with metadata stored in the default `mlruns` folder, along with artifacts. You can check this folder on your machine if you've successfully completed all the previous steps. We can change the storage location for MLflow metadata by specifying a different `backend-store-uri` when running the MLflow UI command. For example, to use a different folder (`mlruns_new`), you would run: `mlflow ui --backend-store-uri ./mlruns_new` and set the tracking URI in your project with:
+`mlflow.set_tracking_uri("file:./mlruns_new")`.
 
-Then, check the MLflow UI to ensure it not contains the experiment and model information.
+### Remote Tracking
+
+In production environments, we typically set up a remote tracking server with artifact storage and a database for MLflow metadata. We can simulate this configuration using MinIO for artifact storage and PostgreSQL for the database. Here's a simple Docker Compose file to achieve this:
+
+1. Set up MinIO.
+2. Use MinIO client (`minio/mc`) to create a bucket for MLflow.
+3. Run `PostgreSQL` as the database.
+4. Start the `MLflow UI`.
+
+
+```python
+from IPython.display import Markdown, display
+with open('tracking_server/docker-compose.yml', 'r') as file:
+    mlproject_content = file.read()
+
+# Display the contents as a Markdown code snippet
+display(Markdown(f"```yaml\n{mlproject_content}\n```"))
+```
+
+
+```yaml
+services:
+
+  s3:
+    image: minio/minio
+    container_name: mlflow_s3
+    ports:
+      - 9000:9000
+      - 9001:9001
+    command: server /data --console-address ':9001'
+    environment:
+      - MINIO_ROOT_USER=mlflow
+      - MINIO_ROOT_PASSWORD=password
+    volumes:
+      - minio_data:/data
+
+  init_s3:
+    image: minio/mc
+    depends_on:
+      - s3
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set minio http://s3:9000 mlflow password) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc mb minio/mlflow;
+      exit 0;
+      "
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=mlflow
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 5050:5000
+    environment:
+      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
+      - AWS_ACCESS_KEY_ID=mlflow
+      - AWS_SECRET_ACCESS_KEY=password
+    command: >
+      mlflow server
+        --backend-store-uri postgresql://mlflow:password@postgres:5432/mlflow
+        --default-artifact-root s3://mlflow/
+        --artifacts-destination s3://mlflow/
+        --host 0.0.0.0
+    depends_on:
+      - s3
+      - postgres
+      - init_s3
+
+volumes:
+  postgres_data:
+  minio_data:
+
+
+```
+
+
+You may run following commands to build and run it: `docker compose -f tracking_server/docker-compose.yml build` and  `docker compose -f tracking_server/docker-compose.yml up`.
+
+> MLflow uses a specific logic for handling artifacts. Instead of processing artifacts, MLflow provides a link to the client, allowing the client to save and download artifacts directly from the artifact storage. Therefore, you need to set up access keys and the tracking server host to log artifacts properly.
+
+
+```python
+import os
+os.environ['AWS_ACCESS_KEY_ID'] = 'mlflow'
+os.environ['AWS_SECRET_ACCESS_KEY'] = 'password'
+os.environ['MLFLOW_TRACKING_URI'] = 'http://localhost:5050'
+os.environ['MLFLOW_S3_ENDPOINT_URL'] = 'http://localhost:9000'
+```
+
+
+```python
+# run data preprocessing step one more time
+mlflow.run(
+    uri = 'mlproject',
+    entry_point = 'data-preprocessing',
+    env_manager='local',
+    experiment_name=config.experiment_name,
+    run_name=config.data_preprocessing_run_name,
+    parameters={'test-size': 0.5},
+)
+```
+
+    2024-07-26 01:10:53 | INFO | Data preprocessing started with test size: 0.5
+    2024-07-26 01:10:53 | INFO | Cancer data downloaded
+    2024-07-26 01:10:53 | INFO | Additional features added
+    2024-07-26 01:10:54 | INFO | Data preprocessing finished
+
+
+
+
+
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x15bc4b450>
+
+
+
+
+After this step, we can access the MLflow tracking server to verify that your run and artifacts have been successfully logged:
+
+![](img/tracking_server.png)
+
+And verify through the MinIO UI that the artifacts have been successfully stored in the bucket:
+
+![](img/minio.png)
+
+And also query our PostgreSQL database to ensure it is being used for metadata:
+
+
+```python
+import psycopg2
+import pandas as pd
+
+conn = psycopg2.connect(dbname='mlflow', user='mlflow', password='password', host='localhost', port='5432')
+try:
+    query = "SELECT experiment_id, name FROM experiments"
+    experiments_df = pd.read_sql(query, conn)
+except Exception as e:
+    print(e)
+else:
+    print(experiments_df)
+finally:
+    conn.close()
+```
+
+       experiment_id                   name
+    0              0                Default
+    1              1  Cancer_Classification
+
+
+> For production deployment, you might need authentication, different user permissions, and monitoring for MLflow, the bucket, database, and specific artifacts. We won't cover these aspects here, and some of them don't have built-in capabilities in MLflow.
+
+So this concludes our tutorial where we explored various MLflow features and demonstrated how to utilize them. MLflow offers many other capabilities, which you can learn about by referring to the official documentation: [MLflow Documentation](https://mlflow.org/docs/latest/index.html).
 
 
 ```python
@@ -1087,4 +1425,9 @@ if __name__ == '__main__':
 import jupytext
 notebook = jupytext.read('modeling.ipynb')
 jupytext.write(notebook, 'modeling.py')
+```
+
+
+```python
+
 ```

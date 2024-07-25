@@ -1,0 +1,61 @@
+services:
+
+  s3:
+    image: minio/minio
+    container_name: mlflow_s3
+    ports:
+      - 9000:9000
+      - 9001:9001
+    command: server /data --console-address ':9001'
+    environment:
+      - MINIO_ROOT_USER=mlflow
+      - MINIO_ROOT_PASSWORD=password
+    volumes:
+      - minio_data:/data
+
+  init_s3:
+    image: minio/mc
+    depends_on:
+      - s3
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set minio http://s3:9000 mlflow password) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc mb minio/mlflow;
+      exit 0;
+      "
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=mlflow
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 5050:5000
+    environment:
+      - MLFLOW_S3_ENDPOINT_URL=http://s3:9000
+      - AWS_ACCESS_KEY_ID=mlflow
+      - AWS_SECRET_ACCESS_KEY=password
+    command: >
+      mlflow server
+        --backend-store-uri postgresql://mlflow:password@postgres:5432/mlflow
+        --default-artifact-root s3://mlflow/
+        --artifacts-destination s3://mlflow/
+        --host 0.0.0.0
+    depends_on:
+      - s3
+      - postgres
+      - init_s3
+
+volumes:
+  postgres_data:
+  minio_data:
+

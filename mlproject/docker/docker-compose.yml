@@ -3,10 +3,12 @@ version: '3.7'
 services:
   project:
     build:
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: docker/Dockerfile
     volumes:
-      - ../../:/workspace
       - /Users/egorborisov/projects/mlflow_example/mlruns:/Users/egorborisov/projects/mlflow_example/mlruns
+    environment:
+      - MLFLOW_TRACKING_URI=file:///Users/egorborisov/projects/mlflow_example/mlruns
     command: >
       mlflow run . --entry-point data-preprocessing --env-manager local
       --experiment-name Cancer_Classification --run-name Data_Preprocessing
