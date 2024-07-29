@@ -1,4 +1,4 @@
-# Mlflow Local Workflow Example
+# Introduction to Mlflow
 
 This guide demonstrates key steps in the machine learning lifecycle using an `XGBoost` example, 
 focusing on integration with `MLflow`. The process includes structuring MLflow experiments and runs, 
@@ -120,15 +120,10 @@ if __name__ == '__main__':
         logger.info('Data preprocessing finished')
 ```
 
-    2024-07-26 01:30:41 | INFO | Data preprocessing started with test size: 0.33
-
-
-    2024/07/26 01:30:41 INFO mlflow.tracking.fluent: Experiment with name 'Cancer_Classification' does not exist. Creating a new experiment.
-
-
-    2024-07-26 01:30:42 | INFO | Cancer data downloaded
-    2024-07-26 01:30:42 | INFO | Additional features added
-    2024-07-26 01:30:42 | INFO | Data preprocessing finished
+    2024-07-29 18:24:35 | INFO | Data preprocessing started with test size: 0.33
+    2024-07-29 18:24:35 | INFO | Cancer data downloaded
+    2024-07-29 18:24:35 | INFO | Additional features added
+    2024-07-29 18:24:35 | INFO | Data preprocessing finished
 
 
 
@@ -261,26 +256,26 @@ if __name__ == '__main__':
         mlflow.log_metric('accuracy', 1 - study.best_value)
 ```
 
-    2024-07-26 01:30:46 | INFO | Hyperparameters tuning started with: 10 trials
+    2024-07-29 18:24:38 | INFO | Hyperparameters tuning started with: 10 trials
 
 
 
     Downloading artifacts:   0%|          | 0/1 [00:00<?, ?it/s]
 
 
-    2024-07-26 01:30:47 | INFO | Starting optuna study
-    2024-07-26 01:30:47 | INFO | Attempt: 0, Accuracy: 0.9658792650918635
-    2024-07-26 01:30:49 | INFO | Attempt: 1, Accuracy: 0.958005249343832
-    2024-07-26 01:30:49 | INFO | Attempt: 2, Accuracy: 0.9685039370078741
-    2024-07-26 01:30:50 | INFO | Attempt: 3, Accuracy: 0.958005249343832
-    2024-07-26 01:30:50 | INFO | Attempt: 4, Accuracy: 0.963254593175853
-    2024-07-26 01:30:50 | INFO | Attempt: 5, Accuracy: 0.958005249343832
-    2024-07-26 01:30:51 | INFO | Attempt: 6, Accuracy: 0.9606299212598425
-    2024-07-26 01:30:52 | INFO | Attempt: 7, Accuracy: 0.9685039370078741
-    2024-07-26 01:30:53 | INFO | Attempt: 8, Accuracy: 0.9685039370078741
-    2024-07-26 01:30:54 | INFO | Attempt: 9, Accuracy: 0.963254593175853
-    2024-07-26 01:30:54 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 6, 'alpha': 0.005681743991343777, 'learning_rate': 0.35094622835796635, 'num_boost_round': 227}
-    2024-07-26 01:30:54 | INFO | Best trial Accuracy: 0.9685039370078741
+    2024-07-29 18:24:38 | INFO | Starting optuna study
+    2024-07-29 18:24:38 | INFO | Attempt: 0, Accuracy: 0.9685039370078741
+    2024-07-29 18:24:38 | INFO | Attempt: 1, Accuracy: 0.9658792650918635
+    2024-07-29 18:24:39 | INFO | Attempt: 2, Accuracy: 0.963254593175853
+    2024-07-29 18:24:40 | INFO | Attempt: 3, Accuracy: 0.9658792650918635
+    2024-07-29 18:24:40 | INFO | Attempt: 4, Accuracy: 0.9685039370078741
+    2024-07-29 18:24:40 | INFO | Attempt: 5, Accuracy: 0.9658792650918635
+    2024-07-29 18:24:41 | INFO | Attempt: 6, Accuracy: 0.9658792650918635
+    2024-07-29 18:24:41 | INFO | Attempt: 7, Accuracy: 0.963254593175853
+    2024-07-29 18:24:41 | INFO | Attempt: 8, Accuracy: 0.9685039370078741
+    2024-07-29 18:24:42 | INFO | Attempt: 9, Accuracy: 0.9658792650918635
+    2024-07-29 18:24:42 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 4, 'alpha': 0.047948350403102226, 'learning_rate': 0.43919492374468233, 'num_boost_round': 69}
+    2024-07-29 18:24:42 | INFO | Best trial Accuracy: 0.9685039370078741
 
 
 ### Review results from MLflow UI
@@ -314,7 +309,7 @@ It is possible, but not necessary, to save the model for each experiment and run
 ```
 
     [NbConvertApp] Converting notebook modeling.ipynb to html
-    [NbConvertApp] Writing 459093 bytes to modeling.html
+    [NbConvertApp] Writing 457789 bytes to modeling.html
 
 
 
@@ -427,8 +422,8 @@ if __name__ == '__main__':
         logger.info('Model registered')
 ```
 
-    2024-07-26 01:30:56 | INFO | Model training started
-    2024-07-26 01:30:56 | INFO | Start mlflow run: 8f61417c580541cb84d88586a3a1a44a
+    2024-07-29 18:24:44 | INFO | Model training started
+    2024-07-29 18:24:44 | INFO | Start mlflow run: 2e9380e092624c6284179e43ba03792f
 
 
 
@@ -443,8 +438,8 @@ if __name__ == '__main__':
     Created version '1' of model 'CancerModelBooster'.
 
 
-    2024-07-26 01:31:01 | INFO | Model training finished
-    2024-07-26 01:31:01 | INFO | Model registered
+    2024-07-29 18:24:51 | INFO | Model training finished
+    2024-07-29 18:24:51 | INFO | Model registered
 
 
     Successfully registered model 'CancerModel'.
@@ -502,9 +497,9 @@ flavors:
     model_format: xgb
     xgb_version: 2.0.3
 mlflow_version: 2.14.2
-model_size_bytes: 35836
-model_uuid: 0badaf06aa254da9811188d6c060a176
-run_id: 8f61417c580541cb84d88586a3a1a44a
+model_size_bytes: 36143
+model_uuid: 5ec4c3f91760447e945f0f75673f302b
+run_id: 2e9380e092624c6284179e43ba03792f
 saved_input_example_info:
   artifact_path: input_example.json
   pandas_orient: split
@@ -537,7 +532,7 @@ signature:
     {"type": "double", "name": "additional_feature", "required": true}]'
   outputs: '[{"type": "long", "required": true}]'
   params: null
-utc_time_created: '2024-07-25 22:31:01.090420'
+utc_time_created: '2024-07-29 15:24:50.337567'
 
 ```
 
@@ -597,8 +592,8 @@ if __name__ == '__main__':
         logger.success('Evaluation finished')
 ```
 
-    2024-07-26 01:31:02 | INFO | Evaluation started
-    2024-07-26 01:31:14 | SUCCESS | Evaluation finished
+    2024-07-29 18:24:51 | INFO | Evaluation started
+    2024-07-29 18:25:03 | SUCCESS | Evaluation finished
 
 
 The results can be viewed in the `mlflow ui`, where various metrics and plots are provided, including `roc-auc`, `confusion matrices`, and `shap plots` (if shap is installed).
@@ -733,16 +728,16 @@ mlflow.run(
 )
 ```
 
-    2024-07-26 01:31:15 | INFO | Data preprocessing started with test size: 0.5
-    2024-07-26 01:31:15 | INFO | Cancer data downloaded
-    2024-07-26 01:31:15 | INFO | Additional features added
-    2024-07-26 01:31:15 | INFO | Data preprocessing finished
+    2024-07-29 18:25:04 | INFO | Data preprocessing started with test size: 0.5
+    2024-07-29 18:25:04 | INFO | Cancer data downloaded
+    2024-07-29 18:25:04 | INFO | Additional features added
+    2024-07-29 18:25:04 | INFO | Data preprocessing finished
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x14e48b3d0>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x28409d050>
 
 
 
@@ -770,24 +765,24 @@ mlflow.run(
     Verifying transaction: ...working... done
     Executing transaction: ...working... done
     Installing pip dependencies: ...working... done
-    2024-07-26 01:32:17 | INFO | Hyperparameters tuning started with: 3.0 trials
-    2024-07-26 01:32:17 | INFO | Starting optuna study
+    2024-07-29 18:26:08 | INFO | Hyperparameters tuning started with: 3.0 trials
+    2024-07-29 18:26:08 | INFO | Starting optuna study
 
 
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 4116.10it/s]
+    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 4369.07it/s]
 
 
-    2024-07-26 01:32:18 | INFO | Attempt: 0, Accuracy: 0.9647629712579321
-    2024-07-26 01:32:19 | INFO | Attempt: 1, Accuracy: 0.9647629712579321
-    2024-07-26 01:32:19 | INFO | Attempt: 2, Accuracy: 0.9647629712579321
-    2024-07-26 01:32:19 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 4, 'alpha': 0.035395325958291854, 'learning_rate': 0.03870216064254879, 'num_boost_round': 209}
-    2024-07-26 01:32:19 | INFO | Best trial Accuracy: 0.9647629712579321
+    2024-07-29 18:26:08 | INFO | Attempt: 0, Accuracy: 0.9400895856662934
+    2024-07-29 18:26:09 | INFO | Attempt: 1, Accuracy: 0.9399776035834266
+    2024-07-29 18:26:09 | INFO | Attempt: 2, Accuracy: 0.9365061590145577
+    2024-07-29 18:26:09 | INFO | Optimization finished, best params: {'objective': 'binary:logistic', 'max_depth': 2, 'alpha': 0.004803061038259577, 'learning_rate': 0.45545250966338285, 'num_boost_round': 287}
+    2024-07-29 18:26:09 | INFO | Best trial Accuracy: 0.9400895856662934
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x14ea3d490>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x283f4ce50>
 
 
 
@@ -802,18 +797,18 @@ mlflow.run(
 )
 ```
 
-    2024-07-26 01:32:21 | INFO | Model training started
-    2024-07-26 01:32:21 | INFO | Start mlflow run: 5d8859a719f94e7cb4283e074bce122d
+    2024-07-29 18:26:12 | INFO | Model training started
+    2024-07-29 18:26:12 | INFO | Start mlflow run: 6d8539377ffd4c5790ee5c4595eebe82
 
 
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 2857.16it/s]
-    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1688.53it/s]
+    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 3679.21it/s]
+    Downloading artifacts: 100%|██████████| 1/1 [00:00<00:00, 1760.83it/s]
     Registered model 'CancerModelBooster' already exists. Creating a new version of this model...
     Created version '2' of model 'CancerModelBooster'.
 
 
-    2024-07-26 01:32:26 | INFO | Model training finished
-    2024-07-26 01:32:26 | INFO | Model registered
+    2024-07-29 18:26:17 | INFO | Model training finished
+    2024-07-29 18:26:17 | INFO | Model registered
 
 
     Registered model 'CancerModel' already exists. Creating a new version of this model...
@@ -823,7 +818,7 @@ mlflow.run(
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x14ea17fd0>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x2841c9b10>
 
 
 
@@ -842,14 +837,14 @@ mlflow.run(
 )
 ```
 
-    2024-07-26 01:32:28 | INFO | Evaluation started
-    2024-07-26 01:32:41 | SUCCESS | Evaluation finished
+    2024-07-29 18:26:19 | INFO | Evaluation started
+    2024-07-29 18:26:32 | SUCCESS | Evaluation finished
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x285290150>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x284617790>
 
 
 
@@ -910,7 +905,7 @@ xgboost_booster.predict(dtest)[:3]
 
 
 
-    array([0.00272871, 0.98742604, 0.9983176 ], dtype=float32)
+    array([0.99679863, 0.03458428, 0.9314984 ], dtype=float32)
 
 
 
@@ -929,7 +924,7 @@ pyfunc_booster.predict(test)[:3]
 
 
 
-    array([0.00272871, 0.98742604, 0.9983176 ], dtype=float32)
+    array([0.99679863, 0.03458428, 0.9314984 ], dtype=float32)
 
 
 
@@ -942,7 +937,7 @@ except Exception as e:
     print(e)
 ```
 
-    Failed to enforce schema of data '<xgboost.core.DMatrix object at 0x14e491e10>' with schema '['mean radius': double (required), 'mean texture': double (required), 'mean perimeter': double (required), 'mean area': double (required), 'mean smoothness': double (required), 'mean compactness': double (required), 'mean concavity': double (required), 'mean concave points': double (required), 'mean symmetry': double (required), 'mean fractal dimension': double (required), 'radius error': double (required), 'texture error': double (required), 'perimeter error': double (required), 'area error': double (required), 'smoothness error': double (required), 'compactness error': double (required), 'concavity error': double (required), 'concave points error': double (required), 'symmetry error': double (required), 'fractal dimension error': double (required), 'worst radius': double (required), 'worst texture': double (required), 'worst perimeter': double (required), 'worst area': double (required), 'worst smoothness': double (required), 'worst compactness': double (required), 'worst concavity': double (required), 'worst concave points': double (required), 'worst symmetry': double (required), 'worst fractal dimension': double (required), 'additional_feature': double (required)]'. Error: Expected input to be DataFrame. Found: DMatrix
+    Failed to enforce schema of data '<xgboost.core.DMatrix object at 0x283f56a10>' with schema '['mean radius': double (required), 'mean texture': double (required), 'mean perimeter': double (required), 'mean area': double (required), 'mean smoothness': double (required), 'mean compactness': double (required), 'mean concavity': double (required), 'mean concave points': double (required), 'mean symmetry': double (required), 'mean fractal dimension': double (required), 'radius error': double (required), 'texture error': double (required), 'perimeter error': double (required), 'area error': double (required), 'smoothness error': double (required), 'compactness error': double (required), 'concavity error': double (required), 'concave points error': double (required), 'symmetry error': double (required), 'fractal dimension error': double (required), 'worst radius': double (required), 'worst texture': double (required), 'worst perimeter': double (required), 'worst area': double (required), 'worst smoothness': double (required), 'worst compactness': double (required), 'worst concavity': double (required), 'worst concave points': double (required), 'worst symmetry': double (required), 'worst fractal dimension': double (required), 'additional_feature': double (required)]'. Error: Expected input to be DataFrame. Found: DMatrix
 
 
 
@@ -954,7 +949,7 @@ pyfunc_booster._model_impl.xgb_model.predict(dtest)[:3]
 
 
 
-    array([0.00272871, 0.98742604, 0.9983176 ], dtype=float32)
+    array([0.99679863, 0.03458428, 0.9314984 ], dtype=float32)
 
 
 
@@ -1001,7 +996,7 @@ Since the pyfunc model has some additional overhead, performance is slightly wor
 xgboost_booster.predict(xgb.DMatrix(test))
 ```
 
-    1.82 ms ± 538 μs per loop (mean ± std. dev. of 7 runs, 100 loops each)
+    1.63 ms ± 191 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
 
 
 
@@ -1010,7 +1005,7 @@ xgboost_booster.predict(xgb.DMatrix(test))
 pyfunc_booster.predict(test)
 ```
 
-    1.87 ms ± 111 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
+    2.01 ms ± 427 μs per loop (mean ± std. dev. of 7 runs, 100 loops each)
 
 
 
@@ -1019,7 +1014,7 @@ pyfunc_booster.predict(test)
 xgboost_model.predict(test)
 ```
 
-    1.52 ms ± 113 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
+    1.5 ms ± 18.1 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
 
 
 
@@ -1028,7 +1023,7 @@ xgboost_model.predict(test)
 pyfunc_model.predict(test)
 ```
 
-    1.75 ms ± 52.1 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
+    1.77 ms ± 3.87 μs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
 
 
 ## Model Serving
@@ -1056,6 +1051,8 @@ You might need to install the following packages: `mlserver`, `mlserver-mlflow`,
 ```
 
     Overwriting mlserve/model-settings.json
+
+
 
 
 To start from local env we can use `mlserver start mlserve`, to start from the Docker setup, you can use the following commands: `docker compose -f mlserve/docker/docker-compose.yml build` and `docker compose -f mlserve/docker/docker-compose.yml up`. 
@@ -1104,7 +1101,7 @@ else:
     print("Error:", response.status_code, response.text)
 ```
 
-    Prediction: {'predictions': [0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1]}
+    Prediction: {'predictions': [1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1]}
 
 
 ### Customize model
@@ -1191,7 +1188,7 @@ else:
     print("Error:", response.status_code, response.text)
 ```
 
-    Prediction: [0.00028586521511897445, 0.992419421672821, 0.9999022483825684, 0.9998113512992859, 0.982346773147583, 0.9994375109672546, 0.9935292601585388, 0.9983763694763184, 0.422036737203598, 0.3386703431606293]
+    Prediction: [0.9993160963058472, 0.016842070966959, 0.8869022727012634, 0.00045257137389853597, 0.9995238780975342, 0.9992940425872803, 0.00012439260899554938, 0.9996622800827026, 0.9997544884681702, 0.9979766011238098]
 
 
 
@@ -1206,9 +1203,9 @@ display(Markdown(f"```\n{mlproject_content}\n```"))
 
 
 ```python
-2024-07-26 01:35:37 | INFO | start request
-2024-07-26 01:35:37 | INFO | batch size: 188
-2024-07-26 01:35:37 | SUCCESS | Finish request
+2024-07-29 18:28:58 | INFO | start request
+2024-07-29 18:28:58 | INFO | batch size: 188
+2024-07-29 18:28:58 | SUCCESS | Finish request
 
 ```
 
@@ -1335,16 +1332,16 @@ mlflow.run(
 )
 ```
 
-    2024-07-26 01:36:38 | INFO | Data preprocessing started with test size: 0.5
-    2024-07-26 01:36:38 | INFO | Cancer data downloaded
-    2024-07-26 01:36:38 | INFO | Additional features added
-    2024-07-26 01:36:39 | INFO | Data preprocessing finished
+    2024-07-29 18:29:34 | INFO | Data preprocessing started with test size: 0.5
+    2024-07-29 18:29:34 | INFO | Cancer data downloaded
+    2024-07-29 18:29:34 | INFO | Additional features added
+    2024-07-29 18:29:34 | INFO | Data preprocessing finished
 
 
 
 
 
-    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x14eb2e710>
+    <mlflow.projects.submitted_run.LocalSubmittedRun at 0x2844b5750>
 
 
 

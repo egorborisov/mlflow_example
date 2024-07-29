@@ -12,7 +12,7 @@
 #     name: python3
 # ---
 
-# # Mlflow Local Workflow Example
+# # Introduction to Mlflow
 #
 # This guide demonstrates key steps in the machine learning lifecycle using an `XGBoost` example, 
 # focusing on integration with `MLflow`. The process includes structuring MLflow experiments and runs, 
@@ -709,6 +709,8 @@ pyfunc_model.predict(test)
     }
 }
 # -
+
+#
 
 # To start from local env we can use `mlserver start mlserve`, to start from the Docker setup, you can use the following commands: `docker compose -f mlserve/docker/docker-compose.yml build` and `docker compose -f mlserve/docker/docker-compose.yml up`. 
 #
