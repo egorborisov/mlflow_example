@@ -68,7 +68,6 @@ from sklearn.model_selection import train_test_split
 from sklearn import datasets
 from loguru import logger
 
-from config import config
 
 # set up logging
 logger.remove()
@@ -85,18 +84,18 @@ def get_cancer_df():
 
 if __name__ == '__main__':
     
-    TEST_SIZE = config.default_test_size
+    TEST_SIZE = 0.33
     # get arguments if running not in ipykernel
     # hide parser = argparse.ArgumentParser()
-    # hide parser.add_argument("--test-size", default=config.default_test_size, type=float)
+    # hide parser.add_argument("--test-size", default=TEST_SIZE, type=float)
     # hide TEST_SIZE = parser.parse_args().test_size
         
     logger.info(f'Data preprocessing started with test size: {TEST_SIZE}')
     
     # create or use an experiment
-    experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
+    experiment_id = mlflow.set_experiment('Cancer_Classification').experiment_id
     
-    with mlflow.start_run(run_name=config.data_preprocessing_run_name):
+    with mlflow.start_run(run_name='Data_Preprocessing'):
             
         # download cancer dataset
         X, y = get_cancer_df()
@@ -160,7 +159,6 @@ import xgboost as xgb
 from xgboost.callback import TrainingCallback
 from loguru import logger
 
-from config import config
 
 # set up logging
 logger.remove()
@@ -214,23 +212,23 @@ def objective(trial):
 
 if __name__ == '__main__':
 
-    N_TRIALS = config.default_n_trials
+    N_TRIALS = 10
     # get arguments if running not in ipykernel
     # hide parser = argparse.ArgumentParser()
-    # hide parser.add_argument("--n-trials", default=config.default_n_trials, type=float)
+    # hide parser.add_argument("--n-trials", default=N_TRIALS, type=float)
     # hide N_TRIALS = parser.parse_args().n_trials
 
     logger.info(f'Hyperparameters tuning started with: {N_TRIALS} trials')
 
     # start experiment
-    experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
+    experiment_id = mlflow.set_experiment('Cancer_Classification').experiment_id
 
-    with mlflow.start_run(run_name=config.hyperparameter_search_run_name, log_system_metrics=True):
+    with mlflow.start_run(run_name='Hyperparameters_Search', log_system_metrics=True):
         
         # get last finished run for data preprocessing
         last_run_id = mlflow.search_runs(
             experiment_ids=[experiment_id],
-            filter_string=f"tags.mlflow.runName = '{config.data_preprocessing_run_name}' and status = 'FINISHED'",
+            filter_string=f"tags.mlflow.runName = 'Data_Preprocessing' and status = 'FINISHED'",
             order_by=["start_time DESC"]
         ).loc[0, 'run_id']
         
@@ -295,7 +293,6 @@ import xgboost as xgb
 import pandas as pd
 from loguru import logger
 
-from config import config
 
 # set up logging
 warnings.filterwarnings('ignore')
@@ -310,9 +307,9 @@ if __name__ == '__main__':
  
     mlflow.xgboost.autolog()
 
-    experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
+    experiment_id = mlflow.set_experiment('Cancer_Classification').experiment_id
 
-    with mlflow.start_run(run_name=config.training_run_name) as run:
+    with mlflow.start_run(run_name='Model_Training') as run:
         
         run_id = run.info.run_id
         logger.info(f'Start mlflow run: {run_id}')
@@ -320,7 +317,7 @@ if __name__ == '__main__':
         # get last finished run for data preprocessing
         last_data_run_id = mlflow.search_runs(
             experiment_ids=[experiment_id],
-            filter_string=f"tags.mlflow.runName = '{config.data_preprocessing_run_name}' and status = 'FINISHED'",
+            filter_string=f"tags.mlflow.runName = 'Data_Preprocessing' and status = 'FINISHED'",
             order_by=["start_time DESC"]
         ).loc[0, 'run_id']
     
@@ -339,7 +336,7 @@ if __name__ == '__main__':
         # get last finished run for hyperparameters tuning
         last_tuning_run = mlflow.search_runs(
             experiment_ids=[experiment_id],
-            filter_string=f"tags.mlflow.runName = '{config.hyperparameter_search_run_name}' and status = 'FINISHED'",
+            filter_string=f"tags.mlflow.runName = 'Hyperparameters_Search' and status = 'FINISHED'",
             order_by=["start_time DESC"]
         ).loc[0, :]
         
@@ -368,7 +365,7 @@ if __name__ == '__main__':
 
         # Register model
         model_uri = f"runs:/{run.info.run_id}/booster"
-        mlflow.register_model(model_uri, config.registered_model_name + 'Booster')
+        mlflow.register_model(model_uri, 'CancerModelBooster')
         
         # Log model as sklearn completable XGBClassifier
         params.update(num_boost_round=model.best_iteration)
@@ -387,7 +384,7 @@ if __name__ == '__main__':
 
         # Register the model
         model_uri = f"runs:/{run.info.run_id}/model"
-        mlflow.register_model(model_uri, config.registered_model_name)
+        mlflow.register_model(model_uri, 'CancerModel')
         
         logger.info('Model registered')
 # -
@@ -442,7 +439,6 @@ import mlflow
 import pandas as pd
 from loguru import logger
 
-from config import config
 
 logger.remove()
 logger.add(sys.stdout, format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}")
@@ -454,7 +450,7 @@ if __name__ == '__main__':
 
     logger.info('Evaluation started')
 
-    experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
+    experiment_id = mlflow.set_experiment('Cancer_Classification').experiment_id
     
     if 'test.csv' in os.listdir():
         eval_dataset = pd.read_csv('test.csv')
@@ -462,14 +458,14 @@ if __name__ == '__main__':
     # hide parser.add_argument("--eval-dataset", type=str)
     # hide eval_dataset = pd.read_csv(parser.parse_args().eval_dataset)
         
-    with mlflow.start_run(run_name=config.data_evaluation_run_name) as run:
+    with mlflow.start_run(run_name='Data_Evaluation') as run:
         
         eval_dataset = mlflow.data.from_pandas(
             eval_dataset, targets="target"
         )
-        last_version = mlflow.MlflowClient().get_registered_model(config.registered_model_name).latest_versions[0].version
+        last_version = mlflow.MlflowClient().get_registered_model('CancerModel').latest_versions[0].version
         mlflow.evaluate(
-            data=eval_dataset, model_type="classifier", model=f'models:/{config.registered_model_name}/{last_version}'
+            data=eval_dataset, model_type="classifier", model=f'models:/CancerModel/{last_version}'
         )
         logger.success('Evaluation finished')
 # -
@@ -534,7 +530,7 @@ if __name__ == '__main__':
 # -
 
 # # copy config and env files to mlproject folder
-# !cp config.py conda.yaml modeling.html test.csv mlproject
+# !cp conda.yaml modeling.html test.csv mlproject
 
 # ### Conda env export
 #
@@ -562,8 +558,8 @@ mlflow.run(
     uri = 'mlproject',
     entry_point = 'data-preprocessing',
     env_manager='local',
-    experiment_name=config.experiment_name,
-    run_name=config.data_preprocessing_run_name,
+    experiment_name='Cancer_Classification',
+    run_name='Data_Preprocessing',
     parameters={'test-size': 0.5},
 )
 
@@ -573,8 +569,8 @@ mlflow.run(
     uri = 'mlproject',
     entry_point = 'hyperparameters-tuning',
     env_manager='conda',
-    experiment_name=config.experiment_name,
-    run_name=config.hyperparameter_search_run_name,
+    experiment_name='Cancer_Classification',
+    run_name='Hyperparameters_Search',
     parameters={'n-trials': 3},
 )
 
@@ -582,20 +578,21 @@ mlflow.run(
     uri = 'mlproject',
     entry_point = 'model-training',
     env_manager='conda',
-    experiment_name=config.experiment_name,
-    run_name=config.training_run_name,
+    experiment_name='Cancer_Classification',
+    run_name='Model_Training',
 )
 
 # +
 # get data
-path = str(config.project_root / 'test.csv')
+import os
+path = os.path.abspath('test.csv')
 
 mlflow.run(
     uri = 'mlproject',
     entry_point = 'data-evaluation',
     env_manager='conda',
-    experiment_name=config.experiment_name,
-    run_name=config.data_evaluation_run_name,
+    experiment_name='Cancer_Classification',
+    run_name='Data_Evaluation',
     parameters={'eval-dataset': path},
 )
 # -
@@ -709,8 +706,6 @@ pyfunc_model.predict(test)
     }
 }
 # -
-
-#
 
 # To start from local env we can use `mlserver start mlserve`, to start from the Docker setup, you can use the following commands: `docker compose -f mlserve/docker/docker-compose.yml build` and `docker compose -f mlserve/docker/docker-compose.yml up`. 
 #
@@ -881,8 +876,8 @@ mlflow.run(
     uri = 'mlproject',
     entry_point = 'data-preprocessing',
     env_manager='local',
-    experiment_name=config.experiment_name,
-    run_name=config.data_preprocessing_run_name,
+    experiment_name='Cancer_Classification',
+    run_name='Data_Preprocessing',
     parameters={'test-size': 0.5},
 )
 
