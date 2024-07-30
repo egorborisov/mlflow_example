@@ -8,7 +8,6 @@ from sklearn.model_selection import train_test_split
 from sklearn import datasets
 from loguru import logger
 
-from config import config
 
 # set up logging
 logger.remove()
@@ -25,18 +24,18 @@ def get_cancer_df():
 
 if __name__ == '__main__':
     
-    TEST_SIZE = config.default_test_size
+    TEST_SIZE = 0.33
     # get arguments if running not in ipykernel
     parser = argparse.ArgumentParser()
-    parser.add_argument("--test-size", default=config.default_test_size, type=float)
+    parser.add_argument("--test-size", default=TEST_SIZE, type=float)
     TEST_SIZE = parser.parse_args().test_size
         
     logger.info(f'Data preprocessing started with test size: {TEST_SIZE}')
     
     # create or use an experiment
-    experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
+    experiment_id = mlflow.set_experiment('Cancer_Classification').experiment_id
     
-    with mlflow.start_run(run_name=config.data_preprocessing_run_name):
+    with mlflow.start_run(run_name='Data_Preprocessing'):
             
         # download cancer dataset
         X, y = get_cancer_df()

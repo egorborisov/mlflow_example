@@ -13,7 +13,6 @@ import xgboost as xgb
 from xgboost.callback import TrainingCallback
 from loguru import logger
 
-from config import config
 
 # set up logging
 logger.remove()
@@ -67,23 +66,23 @@ def objective(trial):
 
 if __name__ == '__main__':
 
-    N_TRIALS = config.default_n_trials
+    N_TRIALS = 10
     # get arguments if running not in ipykernel
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n-trials", default=config.default_n_trials, type=float)
+    parser.add_argument("--n-trials", default=N_TRIALS, type=float)
     N_TRIALS = parser.parse_args().n_trials
 
     logger.info(f'Hyperparameters tuning started with: {N_TRIALS} trials')
 
     # start experiment
-    experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
+    experiment_id = mlflow.set_experiment('Cancer_Classification').experiment_id
 
-    with mlflow.start_run(run_name=config.hyperparameter_search_run_name, log_system_metrics=True):
+    with mlflow.start_run(run_name='Hyperparameters_Search', log_system_metrics=True):
         
         # get last finished run for data preprocessing
         last_run_id = mlflow.search_runs(
             experiment_ids=[experiment_id],
-            filter_string=f"tags.mlflow.runName = '{config.data_preprocessing_run_name}' and status = 'FINISHED'",
+            filter_string=f"tags.mlflow.runName = 'Data_Preprocessing' and status = 'FINISHED'",
             order_by=["start_time DESC"]
         ).loc[0, 'run_id']
         

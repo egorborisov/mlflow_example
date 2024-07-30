@@ -9,7 +9,6 @@ import xgboost as xgb
 import pandas as pd
 from loguru import logger
 
-from config import config
 
 # set up logging
 warnings.filterwarnings('ignore')
@@ -24,9 +23,9 @@ if __name__ == '__main__':
  
     mlflow.xgboost.autolog()
 
-    experiment_id = mlflow.set_experiment(config.experiment_name).experiment_id
+    experiment_id = mlflow.set_experiment('Cancer_Classification').experiment_id
 
-    with mlflow.start_run(run_name=config.training_run_name) as run:
+    with mlflow.start_run(run_name='Model_Training') as run:
         
         run_id = run.info.run_id
         logger.info(f'Start mlflow run: {run_id}')
@@ -34,7 +33,7 @@ if __name__ == '__main__':
         # get last finished run for data preprocessing
         last_data_run_id = mlflow.search_runs(
             experiment_ids=[experiment_id],
-            filter_string=f"tags.mlflow.runName = '{config.data_preprocessing_run_name}' and status = 'FINISHED'",
+            filter_string=f"tags.mlflow.runName = 'Data_Preprocessing' and status = 'FINISHED'",
             order_by=["start_time DESC"]
         ).loc[0, 'run_id']
     
@@ -53,7 +52,7 @@ if __name__ == '__main__':
         # get last finished run for hyperparameters tuning
         last_tuning_run = mlflow.search_runs(
             experiment_ids=[experiment_id],
-            filter_string=f"tags.mlflow.runName = '{config.hyperparameter_search_run_name}' and status = 'FINISHED'",
+            filter_string=f"tags.mlflow.runName = 'Hyperparameters_Search' and status = 'FINISHED'",
             order_by=["start_time DESC"]
         ).loc[0, :]
         
@@ -82,7 +81,7 @@ if __name__ == '__main__':
 
         # Register model
         model_uri = f"runs:/{run.info.run_id}/booster"
-        mlflow.register_model(model_uri, config.registered_model_name + 'Booster')
+        mlflow.register_model(model_uri, 'CancerModelBooster')
         
         # Log model as sklearn completable XGBClassifier
         params.update(num_boost_round=model.best_iteration)
@@ -101,6 +100,6 @@ if __name__ == '__main__':
 
         # Register the model
         model_uri = f"runs:/{run.info.run_id}/model"
-        mlflow.register_model(model_uri, config.registered_model_name)
+        mlflow.register_model(model_uri, 'CancerModel')
         
         logger.info('Model registered')
